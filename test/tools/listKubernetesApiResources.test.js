@@ -3,7 +3,7 @@
 import { describe, it, expect, vi } from "vitest";
 
 // Import the tool execute function
-import { execute } from "../../tools/listKubernetesApiResources.js";
+import { execute } from "../../tools/listKubernetesApiResources.ts";
 
 describe("listKubernetesApiResources tool", () => {
 	it("should call KubernetesService.listAllApiResourceTypes and return its result", async () => {
