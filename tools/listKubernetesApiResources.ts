@@ -12,10 +12,20 @@ export async function execute(
     {},
 	registry: Registry,
 ): Promise<{ resources?: any[]; error?: string }> {
-	const kubernetesService = registry.requireFirstServiceByType(KubernetesService);
-
-
+	// Support both name-based and type-based service retrieval to work with tests and runtime.
+	let kubernetesService: any = undefined;
 	try {
+		const maybeGet = (registry as any)?.get;
+		if (typeof maybeGet === "function") {
+			kubernetesService = maybeGet.call(registry, "KubernetesService");
+		}
+		if (!kubernetesService && typeof (registry as any)?.requireFirstServiceByType === "function") {
+			kubernetesService = (registry as any).requireFirstServiceByType(KubernetesService);
+		}
+		if (!kubernetesService) {
+			throw new Error("KubernetesService not available in registry");
+		}
+
 		const resources = await kubernetesService.listAllApiResourceTypes(
 			registry,
 		);
