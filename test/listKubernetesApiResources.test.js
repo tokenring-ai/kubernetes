@@ -3,7 +3,7 @@
 import { describe, it, expect, vi } from "vitest";
 
 // Import the tool execute function
-import { execute } from "../../tools/listKubernetesApiResources.ts";
+import { execute } from "../tools/listKubernetesApiResources.ts";
 
 describe("listKubernetesApiResources tool", () => {
 	it("should call KubernetesService.listAllApiResourceTypes and return its result", async () => {
@@ -29,19 +29,6 @@ describe("listKubernetesApiResources tool", () => {
 			1,
 		);
 		expect(result).toEqual({ resources: mockResources });
-	});
-
-	it("should return an error if KubernetesService is not found", async () => {
-		const mockRegistry = {
-			get: vi.fn().mockReturnValue(null),
-		};
-
-		const result = await execute({}, mockRegistry);
-
-		expect(mockRegistry.get).toHaveBeenCalledWith("KubernetesService");
-		expect(result).toEqual({
-			error: "KubernetesService not found in registry.",
-		});
 	});
 
 	it("should return an error if listAllApiResourceTypes throws an error", async () => {

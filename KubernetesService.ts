@@ -1,4 +1,4 @@
-import { Service } from "@token-ring/registry";
+import {Registry, Service} from "@token-ring/registry";
 import {
 	KubeConfig,
 	CoreV1Api,
@@ -119,29 +119,29 @@ export default class KubernetesService extends Service {
 		return this.caCertificate;
 	}
 
-	async start(_registry: any) {
+	async start(_registry: Registry) {
 		// Initialize service
 		console.log("KubernetesService starting");
 	}
 
-	async stop(_registry: any) {
+	async stop(_registry: Registry) {
 		// Clean up service
 		console.log("KubernetesService stopping");
 	}
 
 	/**
 	 * Reports the status of the service.
-	 * @param {TokenRingRegistry} registry - The package registry
+	 * @param {TokenRingRegistry} _registry - The package registry
 	 * @returns {Object} Status information.
 	 */
-	async status(_registry: any) {
+	async status(_registry: Registry) {
 		return {
 			active: true,
 			service: "KubernetesService",
 		};
 	}
 
-	async listAllApiResourceTypes(_registry: any): Promise<any[]> {
+	async listAllApiResourceTypes(_registry: Registry): Promise<any[]> {
 		const kc = new KubeConfig();
 
 		// Prepare cluster configuration

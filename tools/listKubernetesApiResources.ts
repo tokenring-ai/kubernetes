@@ -1,5 +1,6 @@
 import z from "zod";
-import type KubernetesService from "../KubernetesService.ts";
+import KubernetesService from "../KubernetesService.ts";
+import {Registry} from "@token-ring/registry";
 
 /**
  * @param {object} args - The arguments for the tool. (Currently no arguments are defined)
@@ -8,16 +9,14 @@ import type KubernetesService from "../KubernetesService.ts";
  * @returns {Promise<object>} A promise that resolves to an object containing the list of resources or an error.
  */
 export async function execute(
-	_args: Record<string, unknown>,
-	registry: { get: (name: string) => KubernetesService | null },
+    {},
+	registry: Registry,
 ): Promise<{ resources?: any[]; error?: string }> {
-	const kubernetesService = registry.get("KubernetesService");
-	if (!kubernetesService) {
-		return { error: "KubernetesService not found in registry." };
-	}
+	const kubernetesService = registry.requireFirstServiceByType(KubernetesService);
+
 
 	try {
-		const resources = await (kubernetesService as any).listAllApiResourceTypes(
+		const resources = await kubernetesService.listAllApiResourceTypes(
 			registry,
 		);
 		return { resources };
