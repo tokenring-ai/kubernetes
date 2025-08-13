@@ -1,10 +1,5 @@
 import {Registry, Service} from "@token-ring/registry";
-import {
-	KubeConfig,
-	CoreV1Api,
-	DiscoveryApi,
-	CustomObjectsApi,
-} from "@kubernetes/client-node";
+import {CoreV1Api, CustomObjectsApi, DiscoveryApi, KubeConfig,} from "@kubernetes/client-node";
 
 export interface KubernetesServiceParams {
 	clusterName: string;
@@ -57,13 +52,13 @@ export default class KubernetesService extends Service {
 		},
 	} as const;
 
-	private clusterName!: string;
-	private apiServerUrl!: string;
-	private namespace?: string;
-	private token?: string;
-	private clientCertificate?: string;
-	private clientKey?: string;
-	private caCertificate?: string;
+	private readonly clusterName!: string;
+	private readonly apiServerUrl!: string;
+	private readonly namespace?: string;
+	private readonly token?: string;
+	private readonly clientCertificate?: string;
+	private readonly clientKey?: string;
+	private readonly caCertificate?: string;
 
 	constructor({
 		clusterName,

@@ -1,6 +1,6 @@
 // Import vitest or your testing library's functions
 // For example, if using vitest:
-import { describe, it, expect, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 // Import the tool execute function
 import { execute } from "../tools/listKubernetesApiResources.ts";
