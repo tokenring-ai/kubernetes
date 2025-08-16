@@ -6,10 +6,12 @@ import KubernetesService from "../KubernetesService.ts";
  * Tool to list all Kubernetes API resources.
  * Returns output without tool name prefix for chatService consumption.
  */
+export const name = "kubernetes/listKubernetesApiResources";
+
 export async function execute(
   {},
   registry: Registry,
-): Promise<{ output: string; } | { error: string }> {
+): Promise<{ output: string }> {
   // Resolve the KubernetesService from the registry.
   let kubernetesService: any = undefined;
   try {
@@ -21,7 +23,7 @@ export async function execute(
       kubernetesService = (registry as any).requireFirstServiceByType(KubernetesService);
     }
     if (!kubernetesService) {
-      throw new Error("KubernetesService not available in registry");
+      throw new Error(`[${name}] KubernetesService not available in registry`);
     }
 
     const resources = await kubernetesService.listAllApiResourceTypes(registry);
@@ -29,9 +31,8 @@ export async function execute(
     const output = JSON.stringify(resources);
     return {output};
   } catch (error: any) {
-    console.error("Error listing Kubernetes API resource types:", error);
-    // Return error in the specified shape.
-    return {error: `Failed to list Kubernetes resources: ${error.message}`};
+    // Throw errors instead of returning them.
+    throw new Error(`[${name}] Failed to list Kubernetes resources: ${error.message}`);
   }
 }
 
