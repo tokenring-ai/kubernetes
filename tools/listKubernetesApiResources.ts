@@ -1,6 +1,6 @@
+import {Registry} from "@token-ring/registry";
 import z from "zod";
 import KubernetesService from "../KubernetesService.ts";
-import { Registry } from "@token-ring/registry";
 
 /**
  * Tool to list all Kubernetes API resources.
@@ -27,11 +27,11 @@ export async function execute(
     const resources = await kubernetesService.listAllApiResourceTypes(registry);
     // Return the successful output without tool name prefix.
     const output = JSON.stringify(resources);
-    return { output };
+    return {output};
   } catch (error: any) {
     console.error("Error listing Kubernetes API resource types:", error);
     // Return error in the specified shape.
-    return { error: `Failed to list Kubernetes resources: ${error.message}` };
+    return {error: `Failed to list Kubernetes resources: ${error.message}`};
   }
 }
 
