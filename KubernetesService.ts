@@ -1,4 +1,4 @@
-import {CoreV1Api, CustomObjectsApi, DiscoveryApi, KubeConfig,} from "@kubernetes/client-node";
+import {CoreV1Api, CustomObjectsApi, DiscoveryApi, KubeConfig} from "@kubernetes/client-node";
 import {Registry, Service} from "@token-ring/registry";
 
 export interface KubernetesServiceParams {
@@ -9,6 +9,39 @@ export interface KubernetesServiceParams {
   clientCertificate?: string;
   clientKey?: string;
   caCertificate?: string;
+}
+
+/**
+ * Information about a discovered Kubernetes resource.
+ */
+export interface K8sResourceInfo {
+  /** API group, e.g., "apps" or "" for core resources */
+  group?: string;
+  /** API version, e.g., "v1" */
+  version?: string;
+  /** Kind of the resource, e.g., "Pod" */
+  kind?: string;
+  /** Namespace for namespaced resources */
+  namespace?: string;
+  /** Name of the resource */
+  name?: string;
+  /** Optional error message if the resource could not be listed */
+  error?: string;
+}
+
+/** Configuration object for a cluster entry in KubeConfig. */
+interface ClusterConfig {
+  name: string;
+  server: string;
+  caData?: string;
+}
+
+/** Configuration object for a user entry in KubeConfig. */
+interface UserConfig {
+  name: string;
+  token?: string;
+  clientCertificateData?: string;
+  clientKeyData?: string;
 }
 
 export default class KubernetesService extends Service {
@@ -114,19 +147,15 @@ export default class KubernetesService extends Service {
   }
 
   async start(_registry: Registry) {
-    // Initialize service
     console.log("KubernetesService starting");
   }
 
   async stop(_registry: Registry) {
-    // Clean up service
     console.log("KubernetesService stopping");
   }
 
   /**
    * Reports the status of the service.
-   * @param {TokenRingRegistry} _registry - The package registry
-   * @returns {Object} Status information.
    */
   async status(_registry: Registry) {
     return {
@@ -135,25 +164,28 @@ export default class KubernetesService extends Service {
     };
   }
 
-  async listAllApiResourceTypes(_registry: Registry): Promise<any[]> {
+  /**
+   * Discover all API resource types across the cluster.
+   */
+  async listAllApiResourceTypes(_registry: Registry): Promise<K8sResourceInfo[]> {
     const kc = new KubeConfig();
 
     // Prepare cluster configuration
-    const clusterConfig: any = {
+    const clusterConfig: ClusterConfig = {
       name: this.clusterName,
       server: this.apiServerUrl,
     };
     if (this.caCertificate) {
-      clusterConfig.caData = this.caCertificate; // Assumed to be base64 encoded PEM
+      clusterConfig.caData = this.caCertificate;
     }
 
     // Prepare user configuration
-    const userConfig: any = {name: "service-user"};
+    const userConfig: UserConfig = {name: "service-user"};
     if (this.token) {
       userConfig.token = this.token;
     } else if (this.clientCertificate && this.clientKey) {
-      userConfig.clientCertificateData = this.clientCertificate; // Assumed to be base64 encoded PEM
-      userConfig.clientKeyData = this.clientKey; // Assumed to be base64 encoded PEM
+      userConfig.clientCertificateData = this.clientCertificate;
+      userConfig.clientKeyData = this.clientKey;
     }
 
     // Load KubeConfig from options
@@ -165,181 +197,146 @@ export default class KubernetesService extends Service {
           name: `${this.clusterName}-context`,
           cluster: this.clusterName,
           user: userConfig.name,
-          namespace: this.namespace || "default", // Use service's namespace or 'default'
+          namespace: this.namespace || "default",
         },
       ],
       currentContext: `${this.clusterName}-context`,
     });
 
-    const discoveryApi: any = kc.makeApiClient(DiscoveryApi);
-    const coreV1Api: any = kc.makeApiClient(CoreV1Api);
-    const customObjectsApi: any = kc.makeApiClient(CustomObjectsApi);
-    const allResources: any[] = [];
+    const discoveryApi: DiscoveryApi = kc.makeApiClient(DiscoveryApi);
+    const coreV1Api: CoreV1Api = kc.makeApiClient(CoreV1Api);
+    const customObjectsApi: CustomObjectsApi = kc.makeApiClient(CustomObjectsApi);
+    const allResources: K8sResourceInfo[] = [];
 
+    // Determine which namespaces to scan
     let namespacesToScan: string[] = [];
     if (this.namespace) {
       namespacesToScan.push(this.namespace);
     } else {
       try {
         console.log("Attempting to list all namespaces...");
-        const {body: nsList} = await coreV1Api.listNamespace();
+        const nsList = await coreV1Api.listNamespace();
         if (nsList && nsList.items) {
-          namespacesToScan = nsList.items.map((ns: any) => ns.metadata.name);
+          namespacesToScan = nsList.items.map((ns) => (ns.metadata?.name ?? ""));
           console.log(`Found namespaces: ${namespacesToScan.join(", ")}`);
         } else {
           console.log("No namespaces found or items array is missing.");
-          namespacesToScan = ["default"]; // Fallback if no items
+          namespacesToScan = ["default"];
         }
       } catch (nsError: any) {
-        console.warn(
-          `Could not list all namespaces: ${nsError.message}. Falling back to 'default' namespace.`,
-        );
-        allResources.push({
-          error: `Namespace discovery failed (falling back to 'default'): ${nsError.message}`,
-        });
-        namespacesToScan = ["default"]; // Fallback namespace
+        console.warn(`Could not list all namespaces: ${nsError.message}. Falling back to 'default' namespace.`);
+        allResources.push({error: `Namespace discovery failed (fallback to 'default'): ${nsError.message}`});
+        namespacesToScan = ["default"];
       }
     }
     if (namespacesToScan.length === 0) {
-      console.warn(
-        "No namespaces specified or discovered, defaulting to 'default'.",
-      );
+      console.warn("No namespaces specified or discovered, defaulting to 'default'.");
       namespacesToScan = ["default"];
     }
 
-    const processApiGroupVersion = async (
-      groupVersion: string,
-      _groupNameForLog?: string,
-    ) => {
+    const processApiGroupVersion = async (groupVersion: string, _groupNameForLog?: string) => {
       try {
-        console.log(
-          `Discovering resources for API group version: ${groupVersion}`,
-        );
-        const {body: apiResourceList} =
-          await discoveryApi.getAPIResources(groupVersion);
+        console.log(`Discovering resources for API group version: ${groupVersion}`);
+        const {body: apiResourceList} = await discoveryApi.getAPIResources(groupVersion);
 
         for (const resource of apiResourceList.resources) {
           if (!resource.verbs || !resource.verbs.includes("list")) {
-            // console.log(`Skipping resource ${resource.kind} in ${groupVersion} as it does not support 'list' verb.`);
             continue;
           }
 
-          const group = (resource as any).group || groupVersion.split("/")[0] || ""; // Prefer explicit group, fallback for core v1
-          const version = (resource as any).version || groupVersion.split("/")[1]; // Prefer explicit version
+          const group = resource.group || groupVersion.split("/")[0] || "";
+          const version = resource.version || groupVersion.split("/")[1];
           const kind = resource.kind as string;
           const pluralName = resource.name as string;
-
-          // console.log(`Processing ${kind} (plural: ${pluralName}) in group: ${group}, version: ${version}`);
 
           if (resource.namespaced) {
             for (const ns of namespacesToScan) {
               try {
-                // console.log(`Listing ${pluralName} in namespace ${ns}...`);
-                const {body: result} =
-                  await customObjectsApi.listNamespacedCustomObject(
-                    group,
-                    version,
-                    ns,
-                    pluralName,
-                  );
+                const {body: result} = await customObjectsApi.listNamespacedCustomObject(
+                  group,
+                  version,
+                  ns,
+                  pluralName,
+                );
                 if (result && (result as any).items) {
                   (result as any).items.forEach((item: any) =>
                     allResources.push({
-                      group: group,
-                      version: version,
-                      kind: kind,
-                      namespace: item.metadata.namespace,
-                      name: item.metadata.name,
-                    }),
+                      group,
+                      version,
+                      kind,
+                      namespace: item.metadata?.namespace,
+                      name: item.metadata?.name,
+                    })
                   );
                 }
               } catch (err: any) {
-                // console.warn(`Failed to list ${pluralName} in namespace ${ns}: ${err.message}`);
                 allResources.push({
-                  group: group,
-                  version: version,
-                  kind: kind,
+                  group,
+                  version,
+                  kind,
                   namespace: ns,
                   error: `Failed to list instances: ${err.message}`,
                 });
               }
             }
           } else {
-            // Cluster-scoped
             try {
-              // console.log(`Listing cluster-scoped ${pluralName}...`);
-              const {body: result} =
-                await customObjectsApi.listClusterCustomObject(
+              const {body: result} = await customObjectsApi.listClusterCustomObject(
+                {
                   group,
                   version,
-                  pluralName,
-                );
-              if (result && (result as any).items) {
-                (result as any).items.forEach((item: any) =>
+                  plural: pluralName
+                }
+              );
+              if (result?.items) {
+                result.items.forEach((item: any) =>
                   allResources.push({
-                    group: group,
-                    version: version,
-                    kind: kind,
-                    name: item.metadata.name,
-                  }),
+                    group,
+                    version,
+                    kind,
+                    name: item.metadata?.name,
+                  })
                 );
               }
             } catch (err: any) {
-              // console.warn(`Failed to list cluster-scoped ${pluralName}: ${err.message}`);
               allResources.push({
-                group: group,
-                version: version,
-                kind: kind,
+                group,
+                version,
+                kind,
                 error: `Failed to list instances: ${err.message}`,
               });
             }
           }
         }
       } catch (groupError: any) {
-        console.warn(
-          `Failed to discover or process resources for API group version ${groupVersion}: ${groupError.message}`,
-        );
-        allResources.push({
-          error: `Resource discovery failed for groupVersion ${groupVersion}: ${groupError.message}`,
-        });
+        console.warn(`Failed to discover or process resources for API group version ${groupVersion}: ${groupError.message}`);
+        allResources.push({error: `Resource discovery failed for groupVersion ${groupVersion}: ${groupError.message}`});
       }
     };
 
-    // 1. Process the core "v1" API group (e.g., pods, services)
+    // Process core v1 API group
     console.log("Processing core v1 API group...");
     await processApiGroupVersion("v1", "core");
 
-    // 2. Discover and process all other API groups (e.g., apps/v1, batch/v1)
+    // Discover and process other API groups
     console.log("Discovering other API groups...");
     try {
-      const {body: apiGroups} = await discoveryApi.getAPIGroupList();
+      const apiGroups = await discoveryApi.getAPIGroupList();
       if (apiGroups && apiGroups.groups) {
         for (const group of apiGroups.groups) {
           if (group.preferredVersion && group.preferredVersion.groupVersion) {
-            console.log(
-              `Processing preferred version ${group.preferredVersion.groupVersion} for group ${group.name}`,
-            );
-            await processApiGroupVersion(
-              group.preferredVersion.groupVersion,
-              group.name,
-            );
+            console.log(`Processing preferred version ${group.preferredVersion.groupVersion} for group ${group.name}`);
+            await processApiGroupVersion(group.preferredVersion.groupVersion, group.name);
           } else {
-            // Fallback or skip if no preferred version, or log
-            console.log(
-              `Skipping API group ${group.name} as it has no preferred version listed.`,
-            );
+            console.log(`Skipping API group ${group.name} as it has no preferred version listed.`);
           }
         }
       } else {
-        console.log(
-          "No additional API groups found or groups array is missing.",
-        );
+        console.log("No additional API groups found or groups array is missing.");
       }
     } catch (apiGroupsError: any) {
       console.error(`Failed to get API group list: ${apiGroupsError.message}`);
-      allResources.push({
-        error: `Failed to get API group list: ${apiGroupsError.message}`,
-      });
+      allResources.push({error: `Failed to get API group list: ${apiGroupsError.message}`});
     }
 
     console.log("Finished processing all resources.");
