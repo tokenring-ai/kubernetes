@@ -1,4 +1,4 @@
-# @token-ring/kubernetes
+# @tokenring-ai/kubernetes
 
 Kubernetes integration for the Token Ring ecosystem. This package exposes a Service that configures a Kubernetes client
 and a set of tools that operate on your cluster through that service.
@@ -20,10 +20,10 @@ namespace-scoped.
 
 This package is part of the Token Ring monorepo and referenced as:
 
-- Name: `@token-ring/kubernetes`
+- Name: `@tokenring-ai/kubernetes`
 - Version: `0.1.0`
 
-It expects a Service registry from `@token-ring/registry` and uses the official Kubernetes JavaScript client
+It expects a Service registry from `@tokenring-ai/registry` and uses the official Kubernetes JavaScript client
 `@kubernetes/client-node` under the hood.
 
 ## KubernetesService
@@ -66,7 +66,7 @@ Notes on authentication:
 
 ## Tools
 
-All tools are exported via `@token-ring/kubernetes/tools` and also re-exported from the package root under `tools`.
+All tools are exported via `@tokenring-ai/kubernetes/tools` and also re-exported from the package root under `tools`.
 
 ### tools.listKubernetesApiResources
 
@@ -83,8 +83,8 @@ All tools are exported via `@token-ring/kubernetes/tools` and also re-exported f
 Example (pseudo usage with a registry):
 
 ```ts
-import {ServiceRegistry} from "@token-ring/registry";
-import {KubernetesService, tools as k8sTools} from "@token-ring/kubernetes";
+import {ServiceRegistry} from "@tokenring-ai/registry";
+import {KubernetesService, tools as k8sTools} from "@tokenring-ai/kubernetes";
 
 const registry = new ServiceRegistry();
 
@@ -137,8 +137,8 @@ On errors while listing certain resources or namespaces, the tool may include en
 If you prefer using the service directly without the tool wrapper:
 
 ```ts
-import {KubernetesService} from "@token-ring/kubernetes";
-import {Registry} from "@token-ring/registry";
+import {KubernetesService} from "@tokenring-ai/kubernetes";
+import {Registry} from "@tokenring-ai/registry";
 
 const svc = new KubernetesService({
   clusterName: "dev",
@@ -164,7 +164,7 @@ Run tests:
 Directly uses:
 
 - `@kubernetes/client-node` for Kubernetes API interactions (DiscoveryApi, CoreV1Api, CustomObjectsApi)
-- `@token-ring/registry` for service registration and lookup
+- `@tokenring-ai/registry` for service registration and lookup
 
 ## License
 

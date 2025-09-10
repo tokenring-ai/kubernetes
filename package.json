@@ -1,10 +1,10 @@
 {
- "name": "@token-ring/kubernetes",
+ "name": "@tokenring-ai/kubernetes",
+ "description": "Kubernetes resources integration",
  "version": "0.1.0",
  "dependencies": {
   "@kubernetes/client-node": "^1.3.0",
-  "@token-ring/chat": "0.1.0",
-  "@token-ring/registry": "0.1.0",
+  "@tokenring-ai/agent": "0.1.0",
   "glob-gitignore": "^1.0.15",
   "next-auth": "^4.24.11",
   "react-syntax-highlighter": "^15.6.1",

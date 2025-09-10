@@ -1,7 +1,12 @@
+import {TokenRingPackage} from "@tokenring-ai/agent";
+import packageJSON from './package.json' with {type: 'json'};
+import * as tools from "./tools.ts";
+
 export {default as KubernetesService} from "./KubernetesService.ts";
 
-export * as tools from "./tools.ts";
-
-export const name = "@token-ring/kubernetes";
-export const description = "Kubernetes resources integration";
-export const version = "0.1.0";
+export const packageInfo: TokenRingPackage = {
+  name: packageJSON.name,
+  version: packageJSON.version,
+  description: packageJSON.description,
+  tools
+};

@@ -1,5 +1,6 @@
 import {CoreV1Api, CustomObjectsApi, DiscoveryApi, KubeConfig} from "@kubernetes/client-node";
-import {Registry, Service} from "@token-ring/registry";
+import {Agent} from "@tokenring-ai/agent";
+import {TokenRingService} from "@tokenring-ai/agent/types";
 
 export interface KubernetesServiceParams {
   clusterName: string;
@@ -44,44 +45,7 @@ interface UserConfig {
   clientKeyData?: string;
 }
 
-export default class KubernetesService extends Service {
-  static constructorProperties = {
-    clusterName: {
-      type: "string",
-      required: true,
-      description: "Name of the Kubernetes cluster",
-    },
-    apiServerUrl: {
-      type: "string",
-      required: true,
-      description: "API server URL of the Kubernetes cluster",
-    },
-    namespace: {
-      type: "string",
-      required: false,
-      description: "Namespace to operate in (default: 'default')",
-    },
-    token: {
-      type: "string",
-      required: false,
-      description: "Bearer token for authentication",
-    },
-    clientCertificate: {
-      type: "string",
-      required: false,
-      description: "Client certificate for TLS authentication",
-    },
-    clientKey: {
-      type: "string",
-      required: false,
-      description: "Client key for TLS authentication",
-    },
-    caCertificate: {
-      type: "string",
-      required: false,
-      description: "CA certificate for TLS verification",
-    },
-  } as const;
+export default class KubernetesService implements TokenRingService {
   name = "KubernetesService";
   description = "Provides Kubernetes functionality";
   private readonly clusterName!: string;
@@ -101,7 +65,6 @@ export default class KubernetesService extends Service {
                 clientKey,
                 caCertificate,
               }: KubernetesServiceParams) {
-    super();
     if (!clusterName) {
       throw new Error("KubernetesService requires a clusterName.");
     }
@@ -145,29 +108,10 @@ export default class KubernetesService extends Service {
   getCaCertificate() {
     return this.caCertificate;
   }
-
-  async start(_registry: Registry) {
-    console.log("KubernetesService starting");
-  }
-
-  async stop(_registry: Registry) {
-    console.log("KubernetesService stopping");
-  }
-
-  /**
-   * Reports the status of the service.
-   */
-  async status(_registry: Registry) {
-    return {
-      active: true,
-      service: "KubernetesService",
-    };
-  }
-
   /**
    * Discover all API resource types across the cluster.
    */
-  async listAllApiResourceTypes(_registry: Registry): Promise<K8sResourceInfo[]> {
+  async listAllApiResourceTypes(_agent: Agent): Promise<K8sResourceInfo[]> {
     const kc = new KubeConfig();
 
     // Prepare cluster configuration
@@ -203,9 +147,9 @@ export default class KubernetesService extends Service {
       currentContext: `${this.clusterName}-context`,
     });
 
-    const discoveryApi: DiscoveryApi = kc.makeApiClient(DiscoveryApi);
-    const coreV1Api: CoreV1Api = kc.makeApiClient(CoreV1Api);
-    const customObjectsApi: CustomObjectsApi = kc.makeApiClient(CustomObjectsApi);
+    const discoveryApi = kc.makeApiClient(DiscoveryApi);
+    const coreV1Api = kc.makeApiClient(CoreV1Api);
+    const customObjectsApi = kc.makeApiClient(CustomObjectsApi);
     const allResources: K8sResourceInfo[] = [];
 
     // Determine which namespaces to scan
