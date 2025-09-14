@@ -1,4 +1,4 @@
-import {CoreV1Api, CustomObjectsApi, DiscoveryApi, KubeConfig} from "@kubernetes/client-node";
+import {CoreV1Api, CustomObjectsApi, DiscoveryApi, KubeConfig, } from "@kubernetes/client-node";
 import {Agent} from "@tokenring-ai/agent";
 import {TokenRingService} from "@tokenring-ai/agent/types";
 
@@ -190,20 +190,20 @@ export default class KubernetesService implements TokenRingService {
 
           const group = resource.group || groupVersion.split("/")[0] || "";
           const version = resource.version || groupVersion.split("/")[1];
-          const kind = resource.kind as string;
-          const pluralName = resource.name as string;
+          const kind = resource.kind;
+          const pluralName = resource.name;
 
           if (resource.namespaced) {
             for (const ns of namespacesToScan) {
               try {
-                const {body: result} = await customObjectsApi.listNamespacedCustomObject(
+                const {body: result} = await customObjectsApi.listNamespacedCustomObject({
                   group,
                   version,
-                  ns,
-                  pluralName,
-                );
-                if (result && (result as any).items) {
-                  (result as any).items.forEach((item: any) =>
+                  namespace: ns,
+                  plural: pluralName
+                });
+                if (result?.items) {
+                  result.items.forEach((item: any) =>
                     allResources.push({
                       group,
                       version,
