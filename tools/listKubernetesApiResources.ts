@@ -12,7 +12,7 @@ export async function execute(
   {},
   agent: Agent,
 ): Promise<{ output: string }> {
-  const kubernetesService = agent.requireFirstServiceByType(KubernetesService);
+  const kubernetesService = agent.requireServiceByType(KubernetesService);
   const resources = await kubernetesService.listAllApiResourceTypes(agent);
   // Return the successful output without tool name prefix.
   const output = JSON.stringify(resources);
