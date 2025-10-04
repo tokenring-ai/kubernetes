@@ -1,16 +1,19 @@
-import {CoreV1Api, CustomObjectsApi, DiscoveryApi, KubeConfig, } from "@kubernetes/client-node";
+import {CoreV1Api, CustomObjectsApi, DiscoveryApi, KubeConfig,} from "@kubernetes/client-node";
 import {Agent} from "@tokenring-ai/agent";
 import {TokenRingService} from "@tokenring-ai/agent/types";
+import {z} from "zod";
 
-export interface KubernetesServiceParams {
-  clusterName: string;
-  apiServerUrl: string;
-  namespace?: string;
-  token?: string;
-  clientCertificate?: string;
-  clientKey?: string;
-  caCertificate?: string;
-}
+export const KubernetesServiceParamsSchema = z.object({
+  clusterName: z.string(),
+  apiServerUrl: z.string(),
+  namespace: z.string().optional(),
+  token: z.string().optional(),
+  clientCertificate: z.string().optional(),
+  clientKey: z.string().optional(),
+  caCertificate: z.string().optional(),
+});
+
+export type KubernetesServiceParams = z.infer<typeof KubernetesServiceParamsSchema>;
 
 /**
  * Information about a discovered Kubernetes resource.
