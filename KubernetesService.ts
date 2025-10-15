@@ -1,4 +1,4 @@
-import {CoreV1Api, CustomObjectsApi, DiscoveryApi, KubeConfig,} from "@kubernetes/client-node";
+import {ApisApi, CoreV1Api, CustomObjectsApi, KubeConfig,} from "@kubernetes/client-node";
 import {Agent} from "@tokenring-ai/agent";
 import {TokenRingService} from "@tokenring-ai/agent/types";
 import {z} from "zod";
@@ -150,7 +150,7 @@ export default class KubernetesService implements TokenRingService {
       currentContext: `${this.clusterName}-context`,
     });
 
-    const discoveryApi = kc.makeApiClient(DiscoveryApi);
+    const apisApi = kc.makeApiClient(ApisApi);
     const coreV1Api = kc.makeApiClient(CoreV1Api);
     const customObjectsApi = kc.makeApiClient(CustomObjectsApi);
     const allResources: K8sResourceInfo[] = [];
@@ -184,7 +184,7 @@ export default class KubernetesService implements TokenRingService {
     const processApiGroupVersion = async (groupVersion: string, _groupNameForLog?: string) => {
       try {
         console.log(`Discovering resources for API group version: ${groupVersion}`);
-        const {body: apiResourceList} = await discoveryApi.getAPIResources(groupVersion);
+        const apiResourceList = await coreV1Api.getAPIResources();
 
         for (const resource of apiResourceList.resources) {
           if (!resource.verbs || !resource.verbs.includes("list")) {
@@ -268,7 +268,7 @@ export default class KubernetesService implements TokenRingService {
     // Discover and process other API groups
     console.log("Discovering other API groups...");
     try {
-      const apiGroups = await discoveryApi.getAPIGroupList();
+      const apiGroups = await apisApi.getAPIVersions();
       if (apiGroups && apiGroups.groups) {
         for (const group of apiGroups.groups) {
           if (group.preferredVersion && group.preferredVersion.groupVersion) {
