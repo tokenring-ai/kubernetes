@@ -3,17 +3,17 @@ import KubernetesService, {KubernetesServiceParamsSchema} from "./KubernetesServ
 import packageJSON from './package.json' with {type: 'json'};
 import * as tools from "./tools.ts";
 
-export const packageInfo: TokenRingPackage = {
+export default {
   name: packageJSON.name,
   version: packageJSON.version,
   description: packageJSON.description,
   install(agentTeam: AgentTeam) {
     const config = agentTeam.getConfigSlice('kubernetes', KubernetesServiceParamsSchema.optional());
     if (config) {
-      agentTeam.addTools(packageInfo, tools);
+      agentTeam.addTools(packageJSON.name, tools);
       agentTeam.addServices(new KubernetesService(config));
     }
   }
-};
+} as TokenRingPackage;
 
 export {default as KubernetesService} from "./KubernetesService.ts";
