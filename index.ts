@@ -1,4 +1,5 @@
 import {AgentTeam, TokenRingPackage} from "@tokenring-ai/agent";
+import {AIService} from "@tokenring-ai/ai-client";
 import KubernetesService, {KubernetesServiceParamsSchema} from "./KubernetesService.ts";
 import packageJSON from './package.json' with {type: 'json'};
 import * as tools from "./tools.ts";
@@ -10,7 +11,9 @@ export default {
   install(agentTeam: AgentTeam) {
     const config = agentTeam.getConfigSlice('kubernetes', KubernetesServiceParamsSchema.optional());
     if (config) {
-      agentTeam.addTools(packageJSON.name, tools);
+      agentTeam.waitForService(AIService, aiService =>
+        aiService.addTools(packageJSON.name, tools)
+      );
       agentTeam.addServices(new KubernetesService(config));
     }
   }
