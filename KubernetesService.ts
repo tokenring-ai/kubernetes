@@ -111,6 +111,7 @@ export default class KubernetesService implements TokenRingService {
   getCaCertificate() {
     return this.caCertificate;
   }
+
   /**
    * Discover all API resource types across the cluster.
    */
