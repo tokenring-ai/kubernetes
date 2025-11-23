@@ -1,5 +1,6 @@
-import {AgentTeam, TokenRingPackage} from "@tokenring-ai/agent";
+import TokenRingApp from "@tokenring-ai/app";
 import {ChatService} from "@tokenring-ai/chat";
+import {TokenRingPlugin} from "@tokenring-ai/app";
 import KubernetesService, {KubernetesServiceParamsSchema} from "./KubernetesService.ts";
 import packageJSON from './package.json' with {type: 'json'};
 import * as tools from "./tools.ts";
@@ -8,15 +9,15 @@ export default {
   name: packageJSON.name,
   version: packageJSON.version,
   description: packageJSON.description,
-  install(agentTeam: AgentTeam) {
-    const config = agentTeam.getConfigSlice('kubernetes', KubernetesServiceParamsSchema.optional());
+  install(app: TokenRingApp) {
+    const config = app.getConfigSlice('kubernetes', KubernetesServiceParamsSchema.optional());
     if (config) {
-      agentTeam.waitForService(ChatService, chatService =>
+      app.waitForService(ChatService, chatService =>
         chatService.addTools(packageJSON.name, tools)
       );
-      agentTeam.addServices(new KubernetesService(config));
+      app.addServices(new KubernetesService(config));
     }
   }
-} as TokenRingPackage;
+} as TokenRingPlugin;
 
 export {default as KubernetesService} from "./KubernetesService.ts";

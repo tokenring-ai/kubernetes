@@ -1,1 +1,1 @@
-export * as listKubernetesApiResources from "./tools/listKubernetesApiResources.ts";
+export {default as listKubernetesApiResources} from "./tools/listKubernetesApiResources.ts";

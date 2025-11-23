@@ -1,6 +1,7 @@
 import {ApisApi, CoreV1Api, CustomObjectsApi, KubeConfig,} from "@kubernetes/client-node";
 import {Agent} from "@tokenring-ai/agent";
-import {TokenRingService} from "@tokenring-ai/agent/types";
+
+import {TokenRingService} from "@tokenring-ai/app/types";
 import {z} from "zod";
 
 export const KubernetesServiceParamsSchema = z.object({
