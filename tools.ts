@@ -1,1 +1,5 @@
-export {default as listKubernetesApiResources} from "./tools/listKubernetesApiResources.ts";
+import {default as listKubernetesApiResources} from "./tools/listKubernetesApiResources.ts";
+
+export default {
+  listKubernetesApiResources,
+};
