@@ -5,13 +5,13 @@
   "dependencies": {
     "@tokenring-ai/app": "0.2.0",
     "@tokenring-ai/chat": "0.2.0",
-    "zod": "^4.1.13",
+    "zod": "catalog:",
     "@kubernetes/client-node": "^1.4.0",
     "@tokenring-ai/agent": "0.2.0",
     "glob-gitignore": "^1.0.15",
     "next-auth": "^4.24.13",
     "react-syntax-highlighter": "^16.1.0",
-    "vite": "7.2.7"
+    "vite": "7.3.0"
   },
   "devDependencies": {
     "vitest": "^4.0.15"
