@@ -19,4 +19,4 @@ export default {
       app.addServices(new KubernetesService(config));
     }
   }
-} as TokenRingPlugin;
+} satisfies TokenRingPlugin;
