@@ -14,7 +14,8 @@
     "vite": "7.3.0"
   },
   "devDependencies": {
-    "vitest": "^4.0.15"
+    "vitest": "catalog:",
+    "typescript": "catalog:"
   },
   "exports": {
     ".": "./index.ts",
@@ -22,7 +23,10 @@
   },
   "license": "MIT",
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "build": "tsc --noEmit",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "type": "module"
 }
