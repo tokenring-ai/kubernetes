@@ -7,7 +7,7 @@ import KubernetesService from "../KubernetesService.ts";
  * Tool to list all Kubernetes API resources.
  * Returns output without tool name prefix for agent consumption.
  */
-const name = "kubernetes/listKubernetesApiResources";
+const name = "kubernetes_listKubernetesApiResources";
 
 async function execute(
   {},
