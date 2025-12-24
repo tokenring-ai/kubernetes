@@ -26,7 +26,7 @@ This package is part of the TokenRing AI monorepo. To use it:
 
 For standalone usage:
 ```bash
-npm install @tokenring-ai/kubernetes @tokenring-ai/agent @kubernetes/client-node
+bun install @tokenring-ai/kubernetes @tokenring-ai/agent @kubernetes/client-node
 ```
 
 ## Package Structure
@@ -97,7 +97,8 @@ interface K8sResourceInfo {
 TokenRing AI tool for listing Kubernetes resources without direct service access.
 
 **Tool Definition:**
-- **Name:** `kubernetes/listKubernetesApiResources`
+- **Name:** `kubernetes_listKubernetesApiResources` (internal name)
+- **Public Name:** `kubernetes/listKubernetesApiResources` (when registered)
 - **Input Schema:** `z.object({})` (no inputs required)
 - **Description:** "Lists all instances of all accessible API resource types in the configured Kubernetes cluster. Fetches resources from all discoverable namespaces if the service is configured to do so, or from the default/specified namespace."
 
@@ -278,7 +279,7 @@ class KubernetesService implements TokenRingService {
 
 ```typescript
 const listKubernetesApiResources = {
-  name: "kubernetes/listKubernetesApiResources",
+  name: "kubernetes_listKubernetesApiResources", // internal name
   description: string,
   inputSchema: z.object({}),
   execute: ({}: {}, agent: Agent) => Promise<{ output: string }>
@@ -291,6 +292,7 @@ const listKubernetesApiResources = {
 const kubernetesPlugin = {
   name: "@tokenring-ai/kubernetes",
   version: "0.2.0",
+  description: "Kubernetes resources integration",
   install: (app: TokenRingApp) => void
 };
 ```
@@ -338,7 +340,7 @@ interface K8sResourceInfo {
 
 Run tests with:
 ```bash
-npm run test
+bun run test
 ```
 
 Tests cover:
