@@ -14,7 +14,6 @@ export default {
   version: packageJSON.version,
   description: packageJSON.description,
   install(app, config) {
-    // const config = app.getConfigSlice('kubernetes', KubernetesServiceParamsSchema.optional());
     if (config.kubernetes) {
       app.waitForService(ChatService, chatService =>
         chatService.addTools(packageJSON.name, tools)
