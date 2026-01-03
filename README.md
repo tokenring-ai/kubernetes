@@ -26,7 +26,7 @@ This package is part of the TokenRing AI monorepo. To use it:
 
 For standalone usage:
 ```bash
-bun install @tokenring-ai/kubernetes @tokenring-ai/agent @kubernetes/client-node
+bun install @tokenring-ai/kubernetes
 ```
 
 ## Package Structure
@@ -36,18 +36,105 @@ pkg/kubernetes/
 ├── index.ts                          # Entry point
 ├── KubernetesService.ts              # Core service implementation
 ├── tools.ts                          # Tool exports
-├── tools/listKubernetesApiResources.ts # Resource listing tool
+├── tools/
+│   └── listKubernetesApiResources.ts # Resource listing tool
 ├── plugin.ts                         # TokenRing plugin integration
+├── vitest.config.ts                  # Vitest configuration
+├── test/
+│   └── listKubernetesApiResources.test.js # Unit tests
+├── LICENSE                           # MIT License
 ├── package.json                      # Package metadata and dependencies
-├── test/listKubernetesApiResources.test.js # Unit tests
 └── README.md                         # This documentation
 ```
 
-## Core Components
+## Chat Commands
+
+This package does not define chat commands. Instead, it provides tools that can be used by agents to interact with Kubernetes clusters.
+
+## Plugin Configuration
+
+The plugin accepts configuration through the `kubernetes` key in your application config.
+
+```typescript
+import TokenRingApp from '@tokenring-ai/app';
+
+const app = new TokenRingApp({
+  config: {
+    kubernetes: {
+      clusterName: 'my-cluster',
+      apiServerUrl: 'https://api.example.com:6443',
+      namespace: 'production',
+      token: process.env.K8S_TOKEN,
+    }
+  }
+});
+```
+
+### Configuration Schema
+
+```typescript
+const schema = z.object({
+  kubernetes: z.object({
+    clusterName: z.string(),
+    apiServerUrl: z.string(),
+    namespace: z.string().optional(),
+    token: z.string().optional(),
+    clientCertificate: z.string().optional(),
+    clientKey: z.string().optional(),
+    caCertificate: z.string().optional(),
+  }).optional()
+});
+```
+
+## Tools
+
+This package provides the following tools for agent interaction with Kubernetes clusters:
+
+### listKubernetesApiResources
+
+Lists all instances of all accessible API resource types in the configured Kubernetes cluster.
+
+**Tool Definition:**
+- **Name:** `kubernetes_listKubernetesApiResources` (internal name)
+- **Public Name:** `kubernetes/listKubernetesApiResources` (when registered)
+- **Input Schema:** `z.object({})` (no inputs required)
+- **Description:** "Lists all instances of all accessible API resource types in the configured Kubernetes cluster. Fetches resources from all discoverable namespaces if the service is configured to do so, or from the default/specified namespace."
+
+**Usage:**
+
+```typescript
+import { Agent } from '@tokenring-ai/agent';
+import KubernetesService from '@tokenring-ai/kubernetes';
+import listKubernetesApiResources from '@tokenring-ai/kubernetes/tools/listKubernetesApiResources';
+
+const agent = new Agent({
+  services: [new KubernetesService({
+    clusterName: 'my-cluster',
+    apiServerUrl: 'https://api.example.com:6443',
+    namespace: 'default',
+    token: 'your-token-here',
+  })],
+  tools: [listKubernetesApiResources],
+});
+
+// Execute the tool through the agent
+const result = await agent.executeTool('kubernetes/listKubernetesApiResources', {});
+const resources = JSON.parse(result.output);
+console.log(resources);
+```
+
+## Services
 
 ### KubernetesService
 
 The main service class implementing `TokenRingService` for Kubernetes integration.
+
+```typescript
+class KubernetesService implements TokenRingService {
+  name: string = "KubernetesService";
+  description: string = "Provides Kubernetes functionality";
+}
+```
 
 #### Constructor
 
@@ -92,22 +179,17 @@ interface K8sResourceInfo {
 }
 ```
 
-### Tools: listKubernetesApiResources
+## Providers
 
-TokenRing AI tool for listing Kubernetes resources without direct service access.
+This package does not define providers.
 
-**Tool Definition:**
-- **Name:** `kubernetes_listKubernetesApiResources` (internal name)
-- **Public Name:** `kubernetes/listKubernetesApiResources` (when registered)
-- **Input Schema:** `z.object({})` (no inputs required)
-- **Description:** "Lists all instances of all accessible API resource types in the configured Kubernetes cluster. Fetches resources from all discoverable namespaces if the service is configured to do so, or from the default/specified namespace."
+## RPC Endpoints
 
-**Execution:**
-```typescript
-execute({}, agent: Agent): Promise<{ output: string }>
-```
+This package does not define RPC endpoints.
 
-Returns JSON-stringified results from `KubernetesService.listAllApiResourceTypes(agent)`.
+## State Management
+
+This package does not implement state management or persistence.
 
 ## Usage Examples
 
@@ -131,7 +213,7 @@ console.log(service.getClusterName());  // "my-cluster"
 ```typescript
 import { Agent } from '@tokenring-ai/agent';
 import KubernetesService from '@tokenring-ai/kubernetes';
-import { listKubernetesApiResources } from '@tokenring-ai/kubernetes/tools/listKubernetesApiResources';
+import listKubernetesApiResources from '@tokenring-ai/kubernetes/tools/listKubernetesApiResources';
 
 const agent = new Agent({
   services: [new KubernetesService({
@@ -320,20 +402,6 @@ interface K8sResourceInfo {
 }
 ```
 
-## Dependencies
-
-### Runtime Dependencies
-
-- `@kubernetes/client-node` (^1.4.0): Official Kubernetes Node.js client library
-- `@tokenring-ai/agent` (0.2.0): TokenRing AI agent framework
-- `@tokenring-ai/app` (0.2.0): TokenRing AI application framework
-- `@tokenring-ai/chat` (0.2.0): TokenRing AI chat services
-- `zod`: Schema validation library
-
-### Development Dependencies
-
-- `vitest` (^4.0.15): Testing framework
-
 ## Development
 
 ### Testing
@@ -395,8 +463,4 @@ The package integrates with TokenRing through:
 
 ## License
 
-MIT License - see LICENSE file for details.
-
----
-
-For issues or feature requests, refer to the TokenRing AI repository guidelines.
+MIT License - see [LICENSE](./LICENSE) file for details.
