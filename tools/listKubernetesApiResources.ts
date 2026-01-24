@@ -8,6 +8,7 @@ import KubernetesService from "../KubernetesService.ts";
  * Returns output without tool name prefix for agent consumption.
  */
 const name = "kubernetes_listKubernetesApiResources";
+const displayName = "Kubernetes/listKubernetesApiResources";
 
 async function execute(
   {},
@@ -26,5 +27,5 @@ const description =
 const inputSchema = z.object({});
 
 export default {
-  name, description, inputSchema, execute,
+  name, displayName, description, inputSchema, execute,
 } satisfies TokenRingToolDefinition<typeof inputSchema>;
