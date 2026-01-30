@@ -5,7 +5,7 @@
   "dependencies": {
     "@tokenring-ai/app": "0.2.0",
     "@tokenring-ai/chat": "0.2.0",
-    "zod": "catalog:",
+    "zod": "^4.3.6",
     "@kubernetes/client-node": "^1.4.0",
     "@tokenring-ai/agent": "0.2.0",
     "glob-gitignore": "^1.0.15",
@@ -14,8 +14,8 @@
     "vite": "7.3.1"
   },
   "devDependencies": {
-    "vitest": "catalog:",
-    "typescript": "catalog:"
+    "vitest": "^4.0.18",
+    "typescript": "^5.9.3"
   },
   "exports": {
     ".": "./index.ts",
