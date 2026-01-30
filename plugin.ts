@@ -1,12 +1,13 @@
 import {TokenRingPlugin} from "@tokenring-ai/app";
 import {ChatService} from "@tokenring-ai/chat";
 import {z} from "zod";
-import KubernetesService, {KubernetesServiceParamsSchema} from "./KubernetesService.ts";
+import KubernetesService from "./KubernetesService.ts";
 import packageJSON from './package.json' with {type: 'json'};
+import {KubernetesServiceConfigSchema} from "./schema.ts";
 import tools from "./tools.ts";
 
 const packageConfigSchema = z.object({
-  kubernetes: KubernetesServiceParamsSchema.optional()
+  kubernetes: KubernetesServiceConfigSchema.optional()
 });
 
 export default {
