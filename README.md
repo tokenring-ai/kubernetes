@@ -39,6 +39,7 @@ pkg/kubernetes/
 ├── tools.ts                      # Tool exports
 ├── tools/
 │   └── listKubernetesApiResources.ts # Resource listing tool
+├── schema.ts                     # Configuration schema
 ├── vitest.config.ts              # Vitest configuration
 ├── package.json                  # Package metadata and dependencies
 └── README.md                     # This documentation
@@ -70,10 +71,10 @@ const app = new TokenRingApp({
 ### Configuration Schema
 
 ```typescript
-import {KubernetesServiceParamsSchema} from '@tokenring-ai/kubernetes';
+import {KubernetesServiceConfigSchema} from '@tokenring-ai/kubernetes';
 
 const schema = z.object({
-  kubernetes: KubernetesServiceParamsSchema.optional()
+  kubernetes: KubernetesServiceConfigSchema.optional()
 });
 ```
 
@@ -161,7 +162,7 @@ const service = new KubernetesService({
 
 #### Constructor Parameters
 
-**KubernetesServiceParams Schema:**
+**KubernetesServiceConfig Schema:**
 ```typescript
 {
   clusterName: string;        // Required: Name of the cluster
@@ -225,8 +226,8 @@ const service = new KubernetesService({
   namespace: 'monitoring',
 });
 
-console.log(service.getClusterName());  // "monitoring-cluster"
-console.log(service.getNamespace());    // "monitoring"
+console.log(service.clusterName);  // "monitoring-cluster"
+console.log(service.namespace);    // "monitoring"
 ```
 
 ## Providers
@@ -255,8 +256,8 @@ const service = new KubernetesService({
   token: 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...',
 });
 
-console.log(service.getClusterName());  // "my-cluster"
-console.log(service.getNamespace());    // "default"
+console.log(service.clusterName);  // "my-cluster"
+console.log(service.namespace);    // "default"
 ```
 
 ### 2. TokenRing Agent Integration with Tools
@@ -331,12 +332,12 @@ console.log(`Found ${resources.length} resources across all namespaces`);
 
 ## Configuration Options
 
-### KubernetesServiceParams Schema
+### KubernetesServiceConfig Schema
 
 ```typescript
-import {KubernetesServiceParamsSchema} from '@tokenring-ai/kubernetes';
+import {KubernetesServiceConfigSchema} from '@tokenring-ai/kubernetes';
 
-const schema = KubernetesServiceParamsSchema;
+const schema = KubernetesServiceConfigSchema;
 ```
 
 The schema is defined as:
@@ -344,7 +345,7 @@ The schema is defined as:
 z.object({
   clusterName: z.string(),
   apiServerUrl: z.string(),
-  namespace: z.string().optional(),
+  namespace: z.string().default("default"),
   token: z.string().optional(),
   clientCertificate: z.string().optional(),
   clientKey: z.string().optional(),
@@ -399,7 +400,7 @@ class KubernetesService implements TokenRingService {
   name: string = "KubernetesService";
   description: string = "Provides Kubernetes functionality";
 
-  constructor(params: KubernetesServiceParams)
+  constructor(params: KubernetesServiceConfig)
 
   // Properties
   readonly clusterName: string
@@ -430,7 +431,7 @@ interface ToolDefinition {
 ### Interfaces
 
 ```typescript
-interface KubernetesServiceParams {
+interface KubernetesServiceConfig {
   clusterName: string;
   apiServerUrl: string;
   namespace?: string;
@@ -500,21 +501,18 @@ Note: Type checking only (`tsc --noEmit`) is required as this is an ES module-ba
 - **Plugin Layer**: Automatic registration with TokenRing applications via `plugin.ts`
 - **Entry Point**: `index.ts` exports the service class for direct import
 
-### Package Dependencies
+## Dependencies
 
-**Production Dependencies:**
-- `@tokenring-ai/app`: TokenRing service and plugin framework
-- `@tokenring-ai/agent`: Agent orchestration
-- `@tokenring-ai/chat`: Chat service and tool definitions
-- `@kubernetes/client-node`: Official Kubernetes Node.js client
-- `next-auth`: Authentication framework
-- `react-syntax-highlighter`: Code syntax highlighting
-- `glob-gitignore`: Git ignore pattern matching
-- `zod`: Schema validation
+**Runtime Dependencies:**
+- `@tokenring-ai/app` (0.2.0)
+- `@tokenring-ai/agent` (0.2.0)
+- `@tokenring-ai/chat` (0.2.0)
+- `@kubernetes/client-node` (^1.4.0)
+- `zod` (^4.3.6)
 
 **Development Dependencies:**
-- `vitest`: Unit testing framework
-- `typescript`: TypeScript compiler
+- `vitest` (^4.0.18)
+- `typescript` (^5.9.3)
 
 ## Limitations
 
@@ -542,22 +540,6 @@ The package integrates with TokenRing through:
 3. **Configuration**: Plugin validates configuration using Zod schemas before registration
 4. **Lifecycle**: Service lifecycle and tool registration are managed by the plugin's `install()` function
 5. **Agent Integration**: Agents request the service via `agent.requireServiceByType()` and execute tools to interact with the cluster
-
-## Dependencies
-
-**Runtime Dependencies:**
-- `@tokenring-ai/app` (0.2.0)
-- `@tokenring-ai/agent` (0.2.0)
-- `@tokenring-ai/chat` (0.2.0)
-- `@kubernetes/client-node` (^1.4.0)
-- `next-auth` (^4.24.13)
-- `react-syntax-highlighter` (^16.1.0)
-- `glob-gitignore` (^1.0.15)
-- `zod` (catalog)
-
-**Development Dependencies:**
-- `vitest` (catalog)
-- `typescript` (catalog)
 
 ## License
 
