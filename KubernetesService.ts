@@ -38,7 +38,7 @@ interface UserConfig {
 }
 
 export default class KubernetesService implements TokenRingService {
-  name = "KubernetesService";
+  readonly name = "KubernetesService";
   description = "Provides Kubernetes functionality";
 
   constructor(readonly options: ParsedKubernetesServiceConfig) {
