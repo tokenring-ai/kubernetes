@@ -111,7 +111,7 @@ const agent = new Agent({
 
 // Execute the tool through the agent
 const result = await agent.executeTool('Kubernetes/listKubernetesApiResources', {});
-const resources = JSON.parse(result.output);
+const resources = JSON.parse(result.data.output);
 console.log(resources);
 ```
 
@@ -120,23 +120,29 @@ console.log(resources);
 The tool retrieves the KubernetesService from the agent's service registry and calls `listAllApiResourceTypes()` method:
 
 ```typescript
-import { Agent } from '@tokenring-ai/agent';
-import { TokenRingToolDefinition } from '@tokenring-ai/chat/schema';
+import Agent from '@tokenring-ai/agent/Agent';
+import {TokenRingToolDefinition, type TokenRingToolJSONResult} from '@tokenring-ai/chat/schema';
 import KubernetesService from './KubernetesService.ts';
+
+const name = 'kubernetes_listKubernetesApiResources';
+const displayName = 'Kubernetes/listKubernetesApiResources';
 
 async function execute(
   {}: any,
   agent: Agent,
-): Promise<{ output: string }> {
+): Promise<TokenRingToolJSONResult<{ output: string }>> {
   const kubernetesService = agent.requireServiceByType(KubernetesService);
   const resources = await kubernetesService.listAllApiResourceTypes(agent);
   const output = JSON.stringify(resources);
-  return {output};
+  return {
+    type: 'json',
+    data: {output}
+  };
 }
 
 export default {
-  name: 'kubernetes_listKubernetesApiResources',
-  displayName: 'Kubernetes/listKubernetesApiResources',
+  name,
+  displayName,
   description: 'Lists all instances of all accessible API resource types in the configured Kubernetes cluster. Fetches resources from all discoverable namespaces if the service is configured to do so, or from the default/specified namespace.',
   inputSchema: z.object({}),
   execute,
@@ -162,7 +168,7 @@ const service = new KubernetesService({
 
 #### Constructor Parameters
 
-**KubernetesServiceConfig Schema:**
+**ParsedKubernetesServiceConfig Schema:**
 ```typescript
 {
   clusterName: string;        // Required: Name of the cluster
@@ -279,7 +285,7 @@ const agent = new Agent({
 
 // Execute the tool through the agent
 const result = await agent.executeTool('Kubernetes/listKubernetesApiResources', {});
-const resources = JSON.parse(result.output);
+const resources = JSON.parse(result.data.output);
 console.log(resources);
 ```
 
@@ -332,7 +338,7 @@ console.log(`Found ${resources.length} resources across all namespaces`);
 
 ## Configuration Options
 
-### KubernetesServiceConfig Schema
+### ParsedKubernetesServiceConfig Schema
 
 ```typescript
 import {KubernetesServiceConfigSchema} from '@tokenring-ai/kubernetes';
@@ -400,7 +406,7 @@ class KubernetesService implements TokenRingService {
   name: string = "KubernetesService";
   description: string = "Provides Kubernetes functionality";
 
-  constructor(params: KubernetesServiceConfig)
+  constructor(options: ParsedKubernetesServiceConfig)
 
   // Properties
   readonly clusterName: string
@@ -424,14 +430,14 @@ interface ToolDefinition {
   displayName: string;    // Display name: "Kubernetes/listKubernetesApiResources"
   description: string;    // Tool description
   inputSchema: z.ZodType; // Input validation schema
-  execute: (input: any, agent: Agent) => Promise<{ output: string }>;
+  execute: (input: any, agent: Agent) => Promise<TokenRingToolJSONResult<{ output: string }>>;
 }
 ```
 
 ### Interfaces
 
 ```typescript
-interface KubernetesServiceConfig {
+interface ParsedKubernetesServiceConfig {
   clusterName: string;
   apiServerUrl: string;
   namespace?: string;
@@ -509,6 +515,10 @@ Note: Type checking only (`tsc --noEmit`) is required as this is an ES module-ba
 - `@tokenring-ai/chat` (0.2.0)
 - `@kubernetes/client-node` (^1.4.0)
 - `zod` (^4.3.6)
+- `glob-gitignore` (^1.0.15)
+- `next-auth` (^4.24.13)
+- `react-syntax-highlighter` (^16.1.0)
+- `vite` (7.3.1)
 
 **Development Dependencies:**
 - `vitest` (^4.0.18)
