@@ -10,7 +10,7 @@
     "@tokenring-ai/agent": "0.2.0",
     "glob-gitignore": "^1.0.15",
     "next-auth": "^4.24.13",
-    "react-syntax-highlighter": "^16.1.0",
+    "react-syntax-highlighter": "^16.1.1",
     "vite": "7.3.1"
   },
   "devDependencies": {
