@@ -16,7 +16,7 @@ Key features:
 
 This package uses the official Kubernetes Node.js client library (`@kubernetes/client-node`) to connect to clusters via API server URLs, tokens, or certificates.
 
-## Installation/Setup
+## Installation
 
 This package is part of the TokenRing AI monorepo. To use it:
 
@@ -33,16 +33,16 @@ bun install @tokenring-ai/kubernetes
 
 ```
 pkg/kubernetes/
-├── index.ts                      # Entry point - exports KubernetesService
-├── KubernetesService.ts          # Core service implementation
-├── plugin.ts                     # TokenRing plugin integration
-├── tools.ts                      # Tool exports
+├── index.ts                          # Entry point - exports KubernetesService
+├── KubernetesService.ts              # Core service implementation
+├── plugin.ts                         # TokenRing plugin integration
+├── tools.ts                          # Tool exports
 ├── tools/
 │   └── listKubernetesApiResources.ts # Resource listing tool
-├── schema.ts                     # Configuration schema
-├── vitest.config.ts              # Vitest configuration
-├── package.json                  # Package metadata and dependencies
-└── README.md                     # This documentation
+├── schema.ts                         # Configuration schema
+├── vitest.config.ts                  # Vitest configuration
+├── package.json                      # Package metadata and dependencies
+└── README.md                         # This documentation
 ```
 
 ## Chat Commands
@@ -71,7 +71,7 @@ const app = new TokenRingApp({
 ### Configuration Schema
 
 ```typescript
-import {KubernetesServiceConfigSchema} from '@tokenring-ai/kubernetes';
+import { KubernetesServiceConfigSchema } from '@tokenring-ai/kubernetes';
 
 const schema = z.object({
   kubernetes: KubernetesServiceConfigSchema.optional()
@@ -121,14 +121,15 @@ The tool retrieves the KubernetesService from the agent's service registry and c
 
 ```typescript
 import Agent from '@tokenring-ai/agent/Agent';
-import {TokenRingToolDefinition, type TokenRingToolJSONResult} from '@tokenring-ai/chat/schema';
-import KubernetesService from './KubernetesService.ts';
+import { TokenRingToolDefinition, type TokenRingToolJSONResult } from '@tokenring-ai/chat/schema';
+import z from 'zod';
+import KubernetesService from '../KubernetesService.ts';
 
 const name = 'kubernetes_listKubernetesApiResources';
 const displayName = 'Kubernetes/listKubernetesApiResources';
 
 async function execute(
-  {}: any,
+  {},
   agent: Agent,
 ): Promise<TokenRingToolJSONResult<{ output: string }>> {
   const kubernetesService = agent.requireServiceByType(KubernetesService);
@@ -136,16 +137,17 @@ async function execute(
   const output = JSON.stringify(resources);
   return {
     type: 'json',
-    data: {output}
+    data: { output }
   };
 }
 
+const description =
+  'Lists all instances of all accessible API resource types in the configured Kubernetes cluster. Fetches resources from all discoverable namespaces if the service is configured to do so, or from the default/specified namespace.';
+
+const inputSchema = z.object({});
+
 export default {
-  name,
-  displayName,
-  description: 'Lists all instances of all accessible API resource types in the configured Kubernetes cluster. Fetches resources from all discoverable namespaces if the service is configured to do so, or from the default/specified namespace.',
-  inputSchema: z.object({}),
-  execute,
+  name, displayName, description, inputSchema, execute,
 } satisfies TokenRingToolDefinition<typeof inputSchema>;
 ```
 
@@ -219,7 +221,7 @@ interface K8sResourceInfo {
 ```
 
 **Method Parameters:**
-- `agent: Agent` - The agent instance (required for service registry access)
+- `agent: Agent` - The agent instance (required for service registry access and logging)
 
 #### Usage Example
 
@@ -341,7 +343,7 @@ console.log(`Found ${resources.length} resources across all namespaces`);
 ### ParsedKubernetesServiceConfig Schema
 
 ```typescript
-import {KubernetesServiceConfigSchema} from '@tokenring-ai/kubernetes';
+import { KubernetesServiceConfigSchema } from '@tokenring-ai/kubernetes';
 
 const schema = KubernetesServiceConfigSchema;
 ```
@@ -403,8 +405,8 @@ z.object({
 
 ```typescript
 class KubernetesService implements TokenRingService {
-  name: string = "KubernetesService";
-  description: string = "Provides Kubernetes functionality";
+  readonly name: string = "KubernetesService";
+  readonly description: string = "Provides Kubernetes functionality";
 
   constructor(options: ParsedKubernetesServiceConfig)
 
@@ -412,10 +414,10 @@ class KubernetesService implements TokenRingService {
   readonly clusterName: string
   readonly apiServerUrl: string
   readonly namespace: string
-  token: string | undefined
-  clientCertificate: string | undefined
-  clientKey: string | undefined
-  caCertificate: string | undefined
+  readonly token: string | undefined
+  readonly clientCertificate: string | undefined
+  readonly clientKey: string | undefined
+  readonly caCertificate: string | undefined
 
   // Methods
   listAllApiResourceTypes(agent: Agent): Promise<K8sResourceInfo[]>
@@ -515,10 +517,6 @@ Note: Type checking only (`tsc --noEmit`) is required as this is an ES module-ba
 - `@tokenring-ai/chat` (0.2.0)
 - `@kubernetes/client-node` (^1.4.0)
 - `zod` (^4.3.6)
-- `glob-gitignore` (^1.0.15)
-- `next-auth` (^4.24.13)
-- `react-syntax-highlighter` (^16.1.0)
-- `vite` (7.3.1)
 
 **Development Dependencies:**
 - `vitest` (^4.0.18)
