@@ -20,7 +20,7 @@ This package uses the official Kubernetes Node.js client library (`@kubernetes/c
 
 This package is part of the TokenRing AI monorepo. To use it:
 
-1. Ensure your project has Node.js (v18+) installed
+1. Ensure your project has Bun installed
 2. The package is available as a dependency
 3. Configure Kubernetes access through the plugin configuration
 
@@ -115,18 +115,16 @@ const resources = JSON.parse(result.data.output);
 console.log(resources);
 ```
 
-**Service Side Tool Executer:**
-
-The tool retrieves the KubernetesService from the agent's service registry and calls `listAllApiResourceTypes()` method:
+**Tool Implementation:**
 
 ```typescript
-import Agent from '@tokenring-ai/agent/Agent';
-import { TokenRingToolDefinition, type TokenRingToolJSONResult } from '@tokenring-ai/chat/schema';
-import z from 'zod';
-import KubernetesService from '../KubernetesService.ts';
+import Agent from "@tokenring-ai/agent/Agent";
+import {TokenRingToolDefinition, type TokenRingToolJSONResult} from "@tokenring-ai/chat/schema";
+import z from "zod";
+import KubernetesService from "../KubernetesService.ts";
 
-const name = 'kubernetes_listKubernetesApiResources';
-const displayName = 'Kubernetes/listKubernetesApiResources';
+const name = "kubernetes_listKubernetesApiResources";
+const displayName = "Kubernetes/listKubernetesApiResources";
 
 async function execute(
   {},
@@ -136,13 +134,13 @@ async function execute(
   const resources = await kubernetesService.listAllApiResourceTypes(agent);
   const output = JSON.stringify(resources);
   return {
-    type: 'json',
-    data: { output }
+    type: "json",
+    data: {output}
   };
 }
 
 const description =
-  'Lists all instances of all accessible API resource types in the configured Kubernetes cluster. Fetches resources from all discoverable namespaces if the service is configured to do so, or from the default/specified namespace.';
+  "Lists all instances of all accessible API resource types in the configured Kubernetes cluster. Fetches resources from all discoverable namespaces if the service is configured to do so, or from the default/specified namespace.";
 
 const inputSchema = z.object({});
 
@@ -183,26 +181,37 @@ const service = new KubernetesService({
 }
 ```
 
-**Constructor Throws:**
-- `Error` if `clusterName` is missing
-- `Error` if `apiServerUrl` is missing
+The service stores the configuration in the `options` property:
+
+```typescript
+class KubernetesService implements TokenRingService {
+  readonly name = "KubernetesService";
+  readonly description = "Provides Kubernetes functionality";
+  
+  constructor(readonly options: ParsedKubernetesServiceConfig) {
+  }
+}
+```
 
 #### Properties
 
 **Read-only properties:**
-- `clusterName: string` - Returns cluster name
-- `apiServerUrl: string` - Returns API server URL
-- `namespace: string` (readonly) - Returns target namespace (defaults to "default")
-- `token: string | undefined` - Returns authentication token
-- `clientCertificate: string | undefined` - Returns client certificate
-- `clientKey: string | undefined` - Returns client private key
-- `caCertificate: string | undefined` - Returns CA certificate
+- `name: string` - Service name: `"KubernetesService"`
+- `description: string` - Service description: `"Provides Kubernetes functionality"`
+- `options: ParsedKubernetesServiceConfig` - Configuration object containing:
+  - `clusterName: string` - Name of the cluster
+  - `apiServerUrl: string` - Kubernetes API server URL
+  - `namespace: string` - Target namespace (defaults to "default")
+  - `token?: string` - Bearer token for authentication
+  - `clientCertificate?: string` - Client certificate
+  - `clientKey?: string` - Client private key
+  - `caCertificate?: string` - CA certificate
 
 #### Key Methods
 
 **Core Methods:**
 
-- `listAllApiResourceTypes(agent: Agent): Promise<K8sResourceInfo[]>`
+- `async listAllApiResourceTypes(agent: Agent): Promise<K8sResourceInfo[]>`
   - Discovers and lists all API resources in the cluster
   - Scans core resources (v1 API group) and custom resources
   - Handles multiple namespaces based on configuration
@@ -234,8 +243,10 @@ const service = new KubernetesService({
   namespace: 'monitoring',
 });
 
-console.log(service.clusterName);  // "monitoring-cluster"
-console.log(service.namespace);    // "monitoring"
+console.log(service.name);  // "KubernetesService"
+console.log(service.description);  // "Provides Kubernetes functionality"
+console.log(service.options.clusterName);  // "monitoring-cluster"
+console.log(service.options.namespace);  // "monitoring"
 ```
 
 ## Providers
@@ -264,8 +275,8 @@ const service = new KubernetesService({
   token: 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...',
 });
 
-console.log(service.clusterName);  // "my-cluster"
-console.log(service.namespace);    // "default"
+console.log(service.options.clusterName);  // "my-cluster"
+console.log(service.options.namespace);    // "default"
 ```
 
 ### 2. TokenRing Agent Integration with Tools
@@ -411,16 +422,12 @@ class KubernetesService implements TokenRingService {
   constructor(options: ParsedKubernetesServiceConfig)
 
   // Properties
-  readonly clusterName: string
-  readonly apiServerUrl: string
-  readonly namespace: string
-  readonly token: string | undefined
-  readonly clientCertificate: string | undefined
-  readonly clientKey: string | undefined
-  readonly caCertificate: string | undefined
+  readonly name: string
+  readonly description: string
+  readonly options: ParsedKubernetesServiceConfig
 
   // Methods
-  listAllApiResourceTypes(agent: Agent): Promise<K8sResourceInfo[]>
+  async listAllApiResourceTypes(agent: Agent): Promise<K8sResourceInfo[]>
 }
 ```
 
