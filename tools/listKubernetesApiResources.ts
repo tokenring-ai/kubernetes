@@ -23,8 +23,7 @@ async function execute(
   };
 }
 
-const description =
-  "Lists all instances of all accessible API resource types in the configured Kubernetes cluster. Fetches resources from all discoverable namespaces if the service is configured to do so, or from the default/specified namespace.";
+const description = "Lists all instances of all accessible API resource types in the configured Kubernetes cluster. Fetches resources from all discoverable namespaces if the service is configured to do so, or from the default/specified namespace.";
 
 const inputSchema = z.object({});
 
