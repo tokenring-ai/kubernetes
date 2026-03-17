@@ -104,13 +104,13 @@ export default class KubernetesService implements TokenRingService {
           namespacesToScan = ["default"];
         }
       } catch (nsError: any) {
-        console.warn(`Could not list all namespaces: ${nsError.message}. Falling back to 'default' namespace.`);
+        //console.warn(`Could not list all namespaces: ${nsError.message}. Falling back to 'default' namespace.`);
         allResources.push({error: `Namespace discovery failed (fallback to 'default'): ${nsError.message}`});
         namespacesToScan = ["default"];
       }
     }
     if (namespacesToScan.length === 0) {
-      console.warn("No namespaces specified or discovered, defaulting to 'default'.");
+      //console.warn("No namespaces specified or discovered, defaulting to 'default'.");
       namespacesToScan = ["default"];
     }
 
@@ -189,7 +189,7 @@ export default class KubernetesService implements TokenRingService {
           }
         }
       } catch (groupError: any) {
-        console.warn(`Failed to discover or process resources for API group version ${groupVersion}: ${groupError.message}`);
+        //console.warn(`Failed to discover or process resources for API group version ${groupVersion}: ${groupError.message}`);
         allResources.push({error: `Resource discovery failed for groupVersion ${groupVersion}: ${groupError.message}`});
       }
     };
