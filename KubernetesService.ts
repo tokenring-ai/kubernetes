@@ -92,25 +92,31 @@ export default class KubernetesService implements TokenRingService {
     let namespacesToScan: string[] = [];
     if (this.options.namespace) {
       namespacesToScan.push(this.options.namespace);
+      agent.infoMessage(`Using configured namespace: ${this.options.namespace}`);
     } else {
       try {
         agent.infoMessage("Attempting to list all namespaces...");
         const nsList = await coreV1Api.listNamespace();
-        if (nsList && nsList.items) {
-          namespacesToScan = nsList.items.map((ns) => (ns.metadata?.name ?? ""));
-          agent.infoMessage(`Found namespaces: ${namespacesToScan.join(", ")}`);
+        if (nsList && nsList.items && nsList.items.length > 0) {
+          namespacesToScan = nsList.items.map((ns) => (ns.metadata?.name ?? "")).filter(name => name);
+          if (namespacesToScan.length > 0) {
+            agent.infoMessage(`Found namespaces: ${namespacesToScan.join(", ")}`);
+          } else {
+            agent.infoMessage("No valid namespaces found, falling back to 'default'");
+            namespacesToScan = ["default"];
+          }
         } else {
-          agent.infoMessage("No namespaces found or items array is missing.");
+          agent.infoMessage("No namespaces found or items array is empty, falling back to 'default'");
           namespacesToScan = ["default"];
         }
       } catch (nsError: any) {
-        //console.warn(`Could not list all namespaces: ${nsError.message}. Falling back to 'default' namespace.`);
+        agent.infoMessage(`Could not list all namespaces: ${nsError.message}. Falling back to 'default' namespace.`);
         allResources.push({error: `Namespace discovery failed (fallback to 'default'): ${nsError.message}`});
         namespacesToScan = ["default"];
       }
     }
     if (namespacesToScan.length === 0) {
-      //console.warn("No namespaces specified or discovered, defaulting to 'default'.");
+      agent.infoMessage("No namespaces specified or discovered, defaulting to 'default'");
       namespacesToScan = ["default"];
     }
 
@@ -129,15 +135,74 @@ export default class KubernetesService implements TokenRingService {
           const kind = resource.kind;
           const pluralName = resource.name;
 
-          if (resource.namespaced) {
+          // For core v1 resources (group is empty), use CoreV1Api
+          // For custom resources (non-empty group), use CustomObjectsApi
+          if (!group) {
+            // Core resources like pods, services, configmaps, etc.
+            // Note: These are listed via CoreV1Api methods
             for (const ns of namespacesToScan) {
               try {
-                const {body: result} = await customObjectsApi.listNamespacedCustomObject({
-                  group,
+                let result: any;
+                if (resource.namespaced) {
+                  // For namespaced core resources, use listNamespacedCustomObject with core group
+                  const {body: coreResult} = await customObjectsApi.listNamespacedCustomObject({
+                    group: "",
+                    version,
+                    namespace: ns,
+                    plural: pluralName
+                  });
+                  result = coreResult;
+                } else {
+                  // For cluster-scoped core resources
+                  const {body: coreResult} = await customObjectsApi.listClusterCustomObject({
+                    group: "",
+                    version,
+                    plural: pluralName
+                  });
+                  result = coreResult;
+                }
+                if (result?.items) {
+                  result.items.forEach((item: any) =>
+                    allResources.push({
+                      group: "v1",
+                      version,
+                      kind,
+                      namespace: item.metadata?.namespace,
+                      name: item.metadata?.name,
+                    })
+                  );
+                }
+              } catch (err: any) {
+                allResources.push({
+                  group: "v1",
                   version,
-                  namespace: ns,
-                  plural: pluralName
+                  kind,
+                  namespace: resource.namespaced ? namespacesToScan[0] : undefined,
+                  error: `Failed to list ${kind} instances: ${err.message}`,
                 });
+              }
+            }
+          } else {
+            // Custom resources - use CustomObjectsApi with the actual group
+            for (const ns of namespacesToScan) {
+              try {
+                let result: any;
+                if (resource.namespaced) {
+                  const {body: customResult} = await customObjectsApi.listNamespacedCustomObject({
+                    group,
+                    version,
+                    namespace: ns,
+                    plural: pluralName
+                  });
+                  result = customResult;
+                } else {
+                  const {body: customResult} = await customObjectsApi.listClusterCustomObject({
+                    group,
+                    version,
+                    plural: pluralName
+                  });
+                  result = customResult;
+                }
                 if (result?.items) {
                   result.items.forEach((item: any) =>
                     allResources.push({
@@ -154,42 +219,15 @@ export default class KubernetesService implements TokenRingService {
                   group,
                   version,
                   kind,
-                  namespace: ns,
-                  error: `Failed to list instances: ${err.message}`,
+                  namespace: resource.namespaced ? ns : undefined,
+                  error: `Failed to list ${kind} instances: ${err.message}`,
                 });
               }
-            }
-          } else {
-            try {
-              const {body: result} = await customObjectsApi.listClusterCustomObject(
-                {
-                  group,
-                  version,
-                  plural: pluralName
-                }
-              );
-              if (result?.items) {
-                result.items.forEach((item: any) =>
-                  allResources.push({
-                    group,
-                    version,
-                    kind,
-                    name: item.metadata?.name,
-                  })
-                );
-              }
-            } catch (err: any) {
-              allResources.push({
-                group,
-                version,
-                kind,
-                error: `Failed to list instances: ${err.message}`,
-              });
             }
           }
         }
       } catch (groupError: any) {
-        //console.warn(`Failed to discover or process resources for API group version ${groupVersion}: ${groupError.message}`);
+        agent.infoMessage(`Failed to discover or process resources for API group version ${groupVersion}: ${groupError.message}`);
         allResources.push({error: `Resource discovery failed for groupVersion ${groupVersion}: ${groupError.message}`});
       }
     };
