@@ -42,6 +42,17 @@ For standalone usage:
 bun install @tokenring-ai/kubernetes
 ```
 
+## Package Exports
+
+The package provides the following exports:
+
+- `.`: Main entry point - exports `KubernetesService`
+- `./index`: Same as main entry point
+- `./KubernetesService`: Direct import of `KubernetesService` class
+- `./plugin`: TokenRing plugin integration
+- `./tools`: Tool exports
+- `./schema`: Configuration schema
+
 ## Package Structure
 
 ```
@@ -395,7 +406,7 @@ async function execute(
   };
 }
 
-const description =  "Lists all instances of all accessible API resource types in the configured Kubernetes cluster. Fetches resources from all discoverable namespaces if the service is configured to do so, or from the default/specified namespace.";
+const description = "Lists all instances of all accessible API resource types in the configured Kubernetes cluster. Fetches resources from all discoverable namespaces if the service is configured to do so, or from the default/specified namespace.";
 
 const inputSchema = z.object({});
 
@@ -661,12 +672,8 @@ export default defineConfig({
 
 | Package | Version | Description |
 |---------|---------|-------------|
-| `vitest` | `^4.1.0` | Testing framework |
-| `typescript` | `^5.9.3` | TypeScript compiler |
-
-### Note on Unused Dependencies
-
-The package.json includes additional dependencies (`glob-gitignore`, `next-auth`, `react-syntax-highlighter`, `vite`) that are not currently used by the core Kubernetes functionality. These may be legacy dependencies from the monorepo setup.
+| `vitest` | `^4.1.1` | Testing framework |
+| `typescript` | `^6.0.2` | TypeScript compiler |
 
 ## Limitations
 
