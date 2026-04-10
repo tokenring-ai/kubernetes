@@ -9,4 +9,6 @@ export const KubernetesServiceConfigSchema = z.object({
   clientKey: z.string().optional(),
   caCertificate: z.string().optional(),
 });
-export type ParsedKubernetesServiceConfig = z.output<typeof KubernetesServiceConfigSchema>;
+export type ParsedKubernetesServiceConfig = z.output<
+  typeof KubernetesServiceConfigSchema
+>;
