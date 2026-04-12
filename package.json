@@ -7,11 +7,7 @@
     "@tokenring-ai/chat": "0.2.0",
     "zod": "^4.3.6",
     "@kubernetes/client-node": "^1.4.0",
-    "@tokenring-ai/agent": "0.2.0",
-    "glob-gitignore": "^1.0.15",
-    "next-auth": "^4.24.13",
-    "react-syntax-highlighter": "^16.1.1",
-    "vite": "8.0.2"
+    "@tokenring-ai/agent": "0.2.0"
   },
   "devDependencies": {
     "vitest": "^4.1.1",

@@ -1,5 +1,5 @@
 import type Agent from "@tokenring-ai/agent/Agent";
-import type {TokenRingToolDefinition, TokenRingToolJSONResult,} from "@tokenring-ai/chat/schema";
+import type {TokenRingToolDefinition, TokenRingToolResult} from "@tokenring-ai/chat/schema";
 import z from "zod";
 import KubernetesService from "../KubernetesService.ts";
 
@@ -13,14 +13,10 @@ const displayName = "Kubernetes/listKubernetesApiResources";
 async function execute(
   _args: z.output<typeof inputSchema>,
   agent: Agent,
-): Promise<TokenRingToolJSONResult<{ output: string }>> {
+): Promise<TokenRingToolResult> {
   const kubernetesService = agent.requireServiceByType(KubernetesService);
   const resources = await kubernetesService.listAllApiResourceTypes(agent);
-  const output = JSON.stringify(resources);
-  return {
-    type: "json",
-    data: {output},
-  };
+  return JSON.stringify(resources);
 }
 
 const description =

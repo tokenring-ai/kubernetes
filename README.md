@@ -1,6 +1,6 @@
 # @tokenring-ai/kubernetes
 
-Kubernetes integration for TokenRing AI agents, enabling AI agents to discover and interact with Kubernetes clusters by listing all accessible API resources, including core and custom resources across namespaces.
+Resource discovery and cluster management tools for Kubernetes environments.
 
 ## Overview
 
@@ -140,7 +140,7 @@ Discovers and lists all API resources in the cluster.
 
 ```typescript
 interface K8sResourceInfo {
-  group?: string;      // API group (e.g., "apps" or "" for core resources)
+  group?: string;      // API group (e.g., "apps" or "v1" for core resources)
   version?: string;    // API version (e.g., "v1")
   kind?: string;       // Resource kind (e.g., "Pod")
   namespace?: string;  // Namespace for namespaced resources
@@ -385,8 +385,8 @@ console.log(resources);
 The tool is defined in `tools/listKubernetesApiResources.ts`:
 
 ```typescript
-import Agent from "@tokenring-ai/agent/Agent";
-import {TokenRingToolDefinition, type TokenRingToolJSONResult} from "@tokenring-ai/chat/schema";
+import type Agent from "@tokenring-ai/agent/Agent";
+import type {TokenRingToolDefinition, TokenRingToolJSONResult,} from "@tokenring-ai/chat/schema";
 import z from "zod";
 import KubernetesService from "../KubernetesService.ts";
 
@@ -394,7 +394,7 @@ const name = "kubernetes_listKubernetesApiResources";
 const displayName = "Kubernetes/listKubernetesApiResources";
 
 async function execute(
-  {},
+  _args: z.output<typeof inputSchema>,
   agent: Agent,
 ): Promise<TokenRingToolJSONResult<{ output: string }>> {
   const kubernetesService = agent.requireServiceByType(KubernetesService);
@@ -402,16 +402,21 @@ async function execute(
   const output = JSON.stringify(resources);
   return {
     type: "json",
-    data: {output}
+    data: {output},
   };
 }
 
-const description = "Lists all instances of all accessible API resource types in the configured Kubernetes cluster. Fetches resources from all discoverable namespaces if the service is configured to do so, or from the default/specified namespace.";
+const description =
+  "Lists all instances of all accessible API resource types in the configured Kubernetes cluster. Fetches resources from all discoverable namespaces if the service is configured to do so, or from the default/specified namespace.";
 
 const inputSchema = z.object({});
 
 export default {
-  name, displayName, description, inputSchema, execute,
+  name,
+  displayName,
+  description,
+  inputSchema,
+  execute,
 } satisfies TokenRingToolDefinition<typeof inputSchema>;
 ```
 
@@ -430,8 +435,9 @@ const plugin = TokenRingPlugin;
 | Property | Value |
 |----------|-------|
 | **Name** | `@tokenring-ai/kubernetes` |
+| **DisplayName** | `Kubernetes Client` |
 | **Version** | `0.2.0` |
-| **Description** | `Kubernetes resources integration` |
+| **Description** | `Resource discovery and cluster management tools for Kubernetes environments.` |
 
 **Plugin Lifecycle:**
 
@@ -444,31 +450,32 @@ const plugin = TokenRingPlugin;
 **Plugin Implementation:**
 
 ```typescript
-import {TokenRingPlugin} from "@tokenring-ai/app";
+import type {TokenRingPlugin} from "@tokenring-ai/app";
 import {ChatService} from "@tokenring-ai/chat";
 import {z} from "zod";
 import KubernetesService from "./KubernetesService.ts";
-import packageJSON from './package.json' with {type: 'json'};
+import packageJSON from "./package.json" with {type: "json"};
 import {KubernetesServiceConfigSchema} from "./schema.ts";
 import tools from "./tools.ts";
 
 const packageConfigSchema = z.object({
-  kubernetes: KubernetesServiceConfigSchema.optional()
+  kubernetes: KubernetesServiceConfigSchema.optional(),
 });
 
 export default {
   name: packageJSON.name,
+  displayName: "Kubernetes Client",
   version: packageJSON.version,
   description: packageJSON.description,
   install(app, config) {
     if (config.kubernetes) {
-      app.waitForService(ChatService, chatService =>
-        chatService.addTools(tools)
+      app.waitForService(ChatService, (chatService) =>
+        chatService.addTools(tools),
       );
       app.addServices(new KubernetesService(config.kubernetes));
     }
   },
-  config: packageConfigSchema
+  config: packageConfigSchema,
 } satisfies TokenRingPlugin<typeof packageConfigSchema>;
 ```
 

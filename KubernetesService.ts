@@ -1,4 +1,4 @@
-import {ApisApi, CoreV1Api, CustomObjectsApi, KubeConfig,} from "@kubernetes/client-node";
+import {ApisApi, CoreV1Api, CustomObjectsApi, KubeConfig} from "@kubernetes/client-node";
 import type {Agent} from "@tokenring-ai/agent";
 
 import type {TokenRingService} from "@tokenring-ai/app/types";
