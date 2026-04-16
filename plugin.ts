@@ -18,7 +18,7 @@ export default {
   install(app, config) {
     if (config.kubernetes) {
       app.waitForService(ChatService, (chatService) =>
-        chatService.addTools(tools),
+        chatService.addTools(...tools),
       );
       app.addServices(new KubernetesService(config.kubernetes));
     }
