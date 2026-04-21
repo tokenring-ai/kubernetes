@@ -1,48 +1,47 @@
-import {ApisApi, CoreV1Api, CustomObjectsApi, KubeConfig} from "@kubernetes/client-node";
-import type {Agent} from "@tokenring-ai/agent";
+import { ApisApi, CoreV1Api, CustomObjectsApi, KubeConfig } from "@kubernetes/client-node";
+import type { Agent } from "@tokenring-ai/agent";
 
-import type {TokenRingService} from "@tokenring-ai/app/types";
-import type {ParsedKubernetesServiceConfig} from "./schema.ts";
+import type { TokenRingService } from "@tokenring-ai/app/types";
+import type { ParsedKubernetesServiceConfig } from "./schema.ts";
 
 /**
  * Information about a discovered Kubernetes resource.
  */
 export interface K8sResourceInfo {
   /** API group, e.g., "apps" or "" for core resources */
-  group?: string;
+  group?: string | undefined;
   /** API version, e.g., "v1" */
-  version?: string;
+  version?: string | undefined;
   /** Kind of the resource, e.g., "Pod" */
-  kind?: string;
+  kind?: string | undefined;
   /** Namespace for namespaced resources */
-  namespace?: string;
+  namespace?: string | undefined;
   /** Name of the resource */
-  name?: string;
+  name?: string | undefined;
   /** Optional error message if the resource could not be listed */
-  error?: string;
+  error?: string | undefined;
 }
 
 /** Configuration object for a cluster entry in KubeConfig. */
 interface ClusterConfig {
   name: string;
   server: string;
-  caData?: string;
+  caData?: string | undefined;
 }
 
 /** Configuration object for a user entry in KubeConfig. */
 interface UserConfig {
   name: string;
-  token?: string;
-  clientCertificateData?: string;
-  clientKeyData?: string;
+  token?: string | undefined;
+  clientCertificateData?: string | undefined;
+  clientKeyData?: string | undefined;
 }
 
 export default class KubernetesService implements TokenRingService {
   readonly name = "KubernetesService";
   description = "Provides Kubernetes functionality";
 
-  constructor(readonly options: ParsedKubernetesServiceConfig) {
-  }
+  constructor(readonly options: ParsedKubernetesServiceConfig) {}
 
   /**
    * Discover all API resource types across the cluster.
@@ -60,7 +59,7 @@ export default class KubernetesService implements TokenRingService {
     }
 
     // Prepare user configuration
-    const userConfig: UserConfig = {name: "service-user"};
+    const userConfig: UserConfig = { name: "service-user" };
     if (this.options.token) {
       userConfig.token = this.options.token;
     } else if (this.options.clientCertificate && this.options.clientKey) {
@@ -92,37 +91,25 @@ export default class KubernetesService implements TokenRingService {
     let namespacesToScan: string[] = [];
     if (this.options.namespace) {
       namespacesToScan.push(this.options.namespace);
-      agent.infoMessage(
-        `Using configured namespace: ${this.options.namespace}`,
-      );
+      agent.infoMessage(`Using configured namespace: ${this.options.namespace}`);
     } else {
       try {
         agent.infoMessage("Attempting to list all namespaces...");
         const nsList = await coreV1Api.listNamespace();
         if (nsList?.items && nsList.items.length > 0) {
-          namespacesToScan = nsList.items
-            .map((ns) => ns.metadata?.name ?? "")
-            .filter((name) => name);
+          namespacesToScan = nsList.items.map(ns => ns.metadata?.name ?? "").filter(name => name);
           if (namespacesToScan.length > 0) {
-            agent.infoMessage(
-              `Found namespaces: ${namespacesToScan.join(", ")}`,
-            );
+            agent.infoMessage(`Found namespaces: ${namespacesToScan.join(", ")}`);
           } else {
-            agent.infoMessage(
-              "No valid namespaces found, falling back to 'default'",
-            );
+            agent.infoMessage("No valid namespaces found, falling back to 'default'");
             namespacesToScan = ["default"];
           }
         } else {
-          agent.infoMessage(
-            "No namespaces found or items array is empty, falling back to 'default'",
-          );
+          agent.infoMessage("No namespaces found or items array is empty, falling back to 'default'");
           namespacesToScan = ["default"];
         }
       } catch (nsError: any) {
-        agent.infoMessage(
-          `Could not list all namespaces: ${nsError.message}. Falling back to 'default' namespace.`,
-        );
+        agent.infoMessage(`Could not list all namespaces: ${nsError.message}. Falling back to 'default' namespace.`);
         allResources.push({
           error: `Namespace discovery failed (fallback to 'default'): ${nsError.message}`,
         });
@@ -130,20 +117,13 @@ export default class KubernetesService implements TokenRingService {
       }
     }
     if (namespacesToScan.length === 0) {
-      agent.infoMessage(
-        "No namespaces specified or discovered, defaulting to 'default'",
-      );
+      agent.infoMessage("No namespaces specified or discovered, defaulting to 'default'");
       namespacesToScan = ["default"];
     }
 
-    const processApiGroupVersion = async (
-      groupVersion: string,
-      _groupNameForLog?: string,
-    ) => {
+    const processApiGroupVersion = async (groupVersion: string, _groupNameForLog?: string) => {
       try {
-        agent.infoMessage(
-          `Discovering resources for API group version: ${groupVersion}`,
-        );
+        agent.infoMessage(`Discovering resources for API group version: ${groupVersion}`);
         const apiResourceList = await coreV1Api.getAPIResources();
 
         for (const resource of apiResourceList.resources) {
@@ -166,22 +146,20 @@ export default class KubernetesService implements TokenRingService {
                 let result: any;
                 if (resource.namespaced) {
                   // For namespaced core resources, use listNamespacedCustomObject with core group
-                  const {body: coreResult} =
-                    await customObjectsApi.listNamespacedCustomObject({
-                      group: "",
-                      version,
-                      namespace: ns,
-                      plural: pluralName,
-                    });
+                  const { body: coreResult } = await customObjectsApi.listNamespacedCustomObject({
+                    group: "",
+                    version,
+                    namespace: ns,
+                    plural: pluralName,
+                  });
                   result = coreResult;
                 } else {
                   // For cluster-scoped core resources
-                  const {body: coreResult} =
-                    await customObjectsApi.listClusterCustomObject({
-                      group: "",
-                      version,
-                      plural: pluralName,
-                    });
+                  const { body: coreResult } = await customObjectsApi.listClusterCustomObject({
+                    group: "",
+                    version,
+                    plural: pluralName,
+                  });
                   result = coreResult;
                 }
                 if (result?.items) {
@@ -192,7 +170,7 @@ export default class KubernetesService implements TokenRingService {
                       kind,
                       namespace: item.metadata?.namespace,
                       name: item.metadata?.name,
-                    })
+                    });
                   });
                 }
               } catch (err: any) {
@@ -200,9 +178,7 @@ export default class KubernetesService implements TokenRingService {
                   group: "v1",
                   version,
                   kind,
-                  namespace: resource.namespaced
-                    ? namespacesToScan[0]
-                    : undefined,
+                  namespace: resource.namespaced ? namespacesToScan[0] : undefined,
                   error: `Failed to list ${kind} instances: ${err.message}`,
                 });
               }
@@ -213,21 +189,19 @@ export default class KubernetesService implements TokenRingService {
               try {
                 let result: any;
                 if (resource.namespaced) {
-                  const {body: customResult} =
-                    await customObjectsApi.listNamespacedCustomObject({
-                      group,
-                      version,
-                      namespace: ns,
-                      plural: pluralName,
-                    });
+                  const { body: customResult } = await customObjectsApi.listNamespacedCustomObject({
+                    group,
+                    version,
+                    namespace: ns,
+                    plural: pluralName,
+                  });
                   result = customResult;
                 } else {
-                  const {body: customResult} =
-                    await customObjectsApi.listClusterCustomObject({
-                      group,
-                      version,
-                      plural: pluralName,
-                    });
+                  const { body: customResult } = await customObjectsApi.listClusterCustomObject({
+                    group,
+                    version,
+                    plural: pluralName,
+                  });
                   result = customResult;
                 }
                 if (result?.items) {
@@ -238,7 +212,7 @@ export default class KubernetesService implements TokenRingService {
                       kind,
                       namespace: item.metadata?.namespace,
                       name: item.metadata?.name,
-                    })
+                    });
                   });
                 }
               } catch (err: any) {
@@ -254,9 +228,7 @@ export default class KubernetesService implements TokenRingService {
           }
         }
       } catch (groupError: any) {
-        agent.infoMessage(
-          `Failed to discover or process resources for API group version ${groupVersion}: ${groupError.message}`,
-        );
+        agent.infoMessage(`Failed to discover or process resources for API group version ${groupVersion}: ${groupError.message}`);
         allResources.push({
           error: `Resource discovery failed for groupVersion ${groupVersion}: ${groupError.message}`,
         });
@@ -274,28 +246,17 @@ export default class KubernetesService implements TokenRingService {
       if (apiGroups?.groups) {
         for (const group of apiGroups.groups) {
           if (group.preferredVersion?.groupVersion) {
-            agent.infoMessage(
-              `Processing preferred version ${group.preferredVersion.groupVersion} for group ${group.name}`,
-            );
-            await processApiGroupVersion(
-              group.preferredVersion.groupVersion,
-              group.name,
-            );
+            agent.infoMessage(`Processing preferred version ${group.preferredVersion.groupVersion} for group ${group.name}`);
+            await processApiGroupVersion(group.preferredVersion.groupVersion, group.name);
           } else {
-            agent.infoMessage(
-              `Skipping API group ${group.name} as it has no preferred version listed.`,
-            );
+            agent.infoMessage(`Skipping API group ${group.name} as it has no preferred version listed.`);
           }
         }
       } else {
-        agent.infoMessage(
-          "No additional API groups found or groups array is missing.",
-        );
+        agent.infoMessage("No additional API groups found or groups array is missing.");
       }
     } catch (apiGroupsError: any) {
-      agent.errorMessage(
-        `Failed to get API group list: ${apiGroupsError.message}`,
-      );
+      agent.errorMessage(`Failed to get API group list: ${apiGroupsError.message}`);
       allResources.push({
         error: `Failed to get API group list: ${apiGroupsError.message}`,
       });

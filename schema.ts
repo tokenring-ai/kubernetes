@@ -4,11 +4,9 @@ export const KubernetesServiceConfigSchema = z.object({
   clusterName: z.string(),
   apiServerUrl: z.string(),
   namespace: z.string().default("default"),
-  token: z.string().optional(),
-  clientCertificate: z.string().optional(),
-  clientKey: z.string().optional(),
-  caCertificate: z.string().optional(),
+  token: z.string().exactOptional(),
+  clientCertificate: z.string().exactOptional(),
+  clientKey: z.string().exactOptional(),
+  caCertificate: z.string().exactOptional(),
 });
-export type ParsedKubernetesServiceConfig = z.output<
-  typeof KubernetesServiceConfigSchema
->;
+export type ParsedKubernetesServiceConfig = z.output<typeof KubernetesServiceConfigSchema>;
