@@ -5,7 +5,7 @@
   "dependencies": {
     "@tokenring-ai/app": "workspace:*",
     "@tokenring-ai/chat": "workspace:*",
-    "zod": "^4.3.6",
+    "zod": "^4.4.3",
     "@kubernetes/client-node": "^1.4.0",
     "@tokenring-ai/agent": "workspace:*"
   },
