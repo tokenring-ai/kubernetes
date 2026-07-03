@@ -131,10 +131,19 @@ export default class KubernetesService implements TokenRingService {
             continue;
           }
 
-          const group = resource.group || groupVersion.split("/")[0] || "";
-          const version = resource.version || groupVersion.split("/")[1];
+          const parts = groupVersion.split("/");
+          const fallbackGroup = parts.length > 1 ? parts[0] : "";
+          const fallbackVersion = parts.length > 1 ? parts[1] : parts[0];
+
+          const group = resource.group || fallbackGroup;
+          const version = resource.version || fallbackVersion;
           const kind = resource.kind;
           const pluralName = resource.name;
+
+          if (!version) {
+            agent.infoMessage(`Skipping resource ${resource.name} due to missing version`);
+            continue;
+          }
 
           // For core v1 resources (group is empty), use CoreV1Api
           // For custom resources (non-empty group), use CustomObjectsApi
