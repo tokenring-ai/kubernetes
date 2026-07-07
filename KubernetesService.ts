@@ -38,12 +38,22 @@ interface UserConfig {
   clientKeyData?: string | undefined;
 }
 
+interface K8sResourceListItem {
+  metadata?: {
+    namespace?: string | undefined;
+    name?: string | undefined;
+  };
+}
+
+interface K8sResourceListResult {
+  items?: K8sResourceListItem[] | undefined;
+}
+
 export default class KubernetesService implements TokenRingService {
   readonly name = "KubernetesService";
   description = "Provides Kubernetes functionality";
 
-  constructor(readonly options: ParsedKubernetesServiceConfig) {
-  }
+  constructor(readonly options: ParsedKubernetesServiceConfig) {}
 
   /**
    * Discover all API resource types across the cluster.
@@ -98,7 +108,7 @@ export default class KubernetesService implements TokenRingService {
       try {
         agent.infoMessage("Attempting to list all namespaces...");
         const nsList = await coreV1Api.listNamespace();
-        if (nsList.items && nsList.items.length > 0) {
+        if (nsList.items.length > 0) {
           namespacesToScan = nsList.items.map(ns => ns.metadata?.name ?? "").filter(name => name);
           if (namespacesToScan.length > 0) {
             agent.infoMessage(`Found namespaces: ${namespacesToScan.join(", ")}`);
@@ -154,27 +164,27 @@ export default class KubernetesService implements TokenRingService {
             // Note: These are listed via CoreV1Api methods
             for (const ns of namespacesToScan) {
               try {
-                let result: any;
+                let result: K8sResourceListResult;
                 if (resource.namespaced) {
                   // For namespaced core resources, use listNamespacedCustomObject with core group
-                  const { body: coreResult } = await customObjectsApi.listNamespacedCustomObject({
+                  const { body: coreResult } = (await customObjectsApi.listNamespacedCustomObject({
                     group: "",
                     version,
                     namespace: ns,
                     plural: pluralName,
-                  });
+                  })) as { body: K8sResourceListResult };
                   result = coreResult;
                 } else {
                   // For cluster-scoped core resources
-                  const { body: coreResult } = await customObjectsApi.listClusterCustomObject({
+                  const { body: coreResult } = (await customObjectsApi.listClusterCustomObject({
                     group: "",
                     version,
                     plural: pluralName,
-                  });
+                  })) as { body: K8sResourceListResult };
                   result = coreResult;
                 }
-                if (result?.items) {
-                  result.items.forEach((item: any) => {
+                if (result.items) {
+                  result.items.forEach(item => {
                     allResources.push({
                       group: "v1",
                       version,
@@ -198,25 +208,25 @@ export default class KubernetesService implements TokenRingService {
             // Custom resources - use CustomObjectsApi with the actual group
             for (const ns of namespacesToScan) {
               try {
-                let result: any;
+                let result: K8sResourceListResult;
                 if (resource.namespaced) {
-                  const { body: customResult } = await customObjectsApi.listNamespacedCustomObject({
+                  const { body: customResult } = (await customObjectsApi.listNamespacedCustomObject({
                     group,
                     version,
                     namespace: ns,
                     plural: pluralName,
-                  });
+                  })) as { body: K8sResourceListResult };
                   result = customResult;
                 } else {
-                  const { body: customResult } = await customObjectsApi.listClusterCustomObject({
+                  const { body: customResult } = (await customObjectsApi.listClusterCustomObject({
                     group,
                     version,
                     plural: pluralName,
-                  });
+                  })) as { body: K8sResourceListResult };
                   result = customResult;
                 }
-                if (result?.items) {
-                  result.items.forEach((item: any) => {
+                if (result.items) {
+                  result.items.forEach(item => {
                     allResources.push({
                       group,
                       version,
