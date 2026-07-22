@@ -63,7 +63,6 @@ pkg/kubernetes/
 ├── tools/
 │   └── listKubernetesApiResources.ts # Resource listing tool
 ├── schema.ts                         # Configuration schema
-├── vitest.config.ts                  # Vitest configuration
 ├── package.json                      # Package metadata and dependencies
 └── README.md                         # This documentation
 ```
@@ -597,7 +596,7 @@ console.log(`Found ${resources.length} resources across all namespaces`);
 
 ### Testing
 
-The package uses vitest for unit testing. Run tests with:
+The package uses bun test for unit testing. Run tests with:
 
 ```bash
 bun run test
@@ -637,10 +636,10 @@ Note: Type checking only (`tsc --noEmit`) is required as this is an ES module-ba
 ```json
 {
   "scripts": {
-    "test": "vitest run",
+    "test": "bun test",
     "build": "tsc --noEmit",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:watch": "bun test --watch",
+    "test:coverage": "bun test --coverage"
   }
 }
 ```
@@ -648,7 +647,7 @@ Note: Type checking only (`tsc --noEmit`) is required as this is an ES module-ba
 ### Vitest Configuration
 
 ```typescript
-import { defineConfig } from "vitest/config";
+import { defineConfig } from "bun:test";
 
 export default defineConfig({
   test: {
@@ -676,7 +675,7 @@ export default defineConfig({
 
 | Package      | Version  | Description         |
 |--------------|----------|---------------------|
-| `vitest`     | `^4.1.1` | Testing framework   |
+| `bun test`     | builtin  | Testing framework   |
 | `typescript` | `^6.0.2` | TypeScript compiler |
 
 ## Limitations
