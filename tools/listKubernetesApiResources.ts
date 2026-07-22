@@ -13,7 +13,10 @@ const displayName = "Kubernetes/listKubernetesApiResources";
 async function execute(_args: z.output<typeof inputSchema>, agent: Agent): Promise<TokenRingToolResult> {
   const kubernetesService = agent.requireServiceByType(KubernetesService);
   const resources = await kubernetesService.listAllApiResourceTypes(agent);
-  return JSON.stringify(resources);
+  return {
+    message: `**Kubernetes** List resources`,
+    result: JSON.stringify(resources),
+  };
 }
 
 const description =
