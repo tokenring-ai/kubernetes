@@ -21,5 +21,5 @@ export default {
       app.addServices(new KubernetesService(config.kubernetes));
     }
   },
-  config: packageConfigSchema,
+  configSchema: packageConfigSchema,
 } satisfies TokenRingPlugin<typeof packageConfigSchema>;
