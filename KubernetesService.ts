@@ -53,30 +53,43 @@ export default class KubernetesService implements TokenRingService {
   readonly name = "KubernetesService";
   description = "Provides Kubernetes functionality";
 
-  constructor(readonly options: ParsedKubernetesServiceConfig) {}
+  private options: ParsedKubernetesServiceConfig | undefined;
+
+  constructor(options?: ParsedKubernetesServiceConfig) {
+    if (options) this.options = options;
+  }
+
+  reconfigure(options: ParsedKubernetesServiceConfig): void {
+    this.options = options;
+  }
 
   /**
    * Discover all API resource types across the cluster.
    */
   async listAllApiResourceTypes(agent: Agent): Promise<K8sResourceInfo[]> {
+    const options = this.options;
+    if (!options) {
+      throw new Error("Kubernetes service has not been configured");
+    }
+
     const kc = new KubeConfig();
 
     // Prepare cluster configuration
     const clusterConfig: ClusterConfig = {
-      name: this.options.clusterName,
-      server: this.options.apiServerUrl,
+      name: options.clusterName,
+      server: options.apiServerUrl,
     };
-    if (this.options.caCertificate) {
-      clusterConfig.caData = this.options.caCertificate;
+    if (options.caCertificate) {
+      clusterConfig.caData = options.caCertificate;
     }
 
     // Prepare user configuration
     const userConfig: UserConfig = { name: "service-user" };
-    if (this.options.token) {
-      userConfig.token = this.options.token;
-    } else if (this.options.clientCertificate && this.options.clientKey) {
-      userConfig.clientCertificateData = this.options.clientCertificate;
-      userConfig.clientKeyData = this.options.clientKey;
+    if (options.token) {
+      userConfig.token = options.token;
+    } else if (options.clientCertificate && options.clientKey) {
+      userConfig.clientCertificateData = options.clientCertificate;
+      userConfig.clientKeyData = options.clientKey;
     }
 
     // Load KubeConfig from options
@@ -85,13 +98,13 @@ export default class KubernetesService implements TokenRingService {
       users: [userConfig],
       contexts: [
         {
-          name: `${this.options.clusterName}-context`,
-          cluster: this.options.clusterName,
+          name: `${options.clusterName}-context`,
+          cluster: options.clusterName,
           user: userConfig.name,
-          namespace: this.options.namespace || "default",
+          namespace: options.namespace || "default",
         },
       ],
-      currentContext: `${this.options.clusterName}-context`,
+      currentContext: `${options.clusterName}-context`,
     });
 
     const apisApi = kc.makeApiClient(ApisApi);
@@ -101,9 +114,9 @@ export default class KubernetesService implements TokenRingService {
 
     // Determine which namespaces to scan
     let namespacesToScan: string[] = [];
-    if (this.options.namespace) {
-      namespacesToScan.push(this.options.namespace);
-      agent.infoMessage(`Using configured namespace: ${this.options.namespace}`);
+    if (options.namespace) {
+      namespacesToScan.push(options.namespace);
+      agent.infoMessage(`Using configured namespace: ${options.namespace}`);
     } else {
       try {
         agent.infoMessage("Attempting to list all namespaces...");

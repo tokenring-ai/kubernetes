@@ -15,10 +15,13 @@ export default {
   displayName: "Kubernetes Client",
   version: packageJSON.version,
   description: packageJSON.description,
-  install(app, config) {
+  install(app) {
+    app.addServices(new KubernetesService());
+    app.waitForService(ChatService, chatService => chatService.addTools(...tools));
+  },
+  reconfigure(app, config) {
     if (config.kubernetes) {
-      app.waitForService(ChatService, chatService => chatService.addTools(...tools));
-      app.addServices(new KubernetesService(config.kubernetes));
+      app.requireService(KubernetesService).reconfigure(config.kubernetes);
     }
   },
   configSchema: packageConfigSchema,
