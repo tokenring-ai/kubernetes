@@ -16,8 +16,8 @@ export default {
   version: packageJSON.version,
   description: packageJSON.description,
   install(app) {
-    app.addServices(new KubernetesService());
-    app.waitForService(ChatService, chatService => chatService.addTools(...tools));
+    app.addService(new KubernetesService());
+    app.waitForService(ChatService, chatService => chatService.addTools(tools));
   },
   reconfigure(app, config) {
     if (config.kubernetes) {

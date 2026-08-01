@@ -397,7 +397,7 @@ const name = "kubernetes_listKubernetesApiResources";
 const displayName = "Kubernetes/listKubernetesApiResources";
 
 async function execute(_args: z.output<typeof inputSchema>, agent: Agent): Promise<TokenRingToolResult> {
-  const kubernetesService = agent.requireServiceByType(KubernetesService);
+  const kubernetesService = agent.requireService(KubernetesService);
   const resources = await kubernetesService.listAllApiResourceTypes(agent);
   return JSON.stringify(resources);
 }
@@ -695,7 +695,7 @@ The package integrates with TokenRing through:
 2. **Tool Registration**: Tools are automatically added to chat services with proper naming and display names
 3. **Configuration**: Plugin validates configuration using Zod schemas before registration
 4. **Lifecycle**: Service lifecycle and tool registration are managed by the plugin's `install()` function
-5. **Agent Integration**: Agents request the service via `agent.requireServiceByType()` and execute tools to interact
+5. **Agent Integration**: Agents request the service via `agent.requireService()` and execute tools to interact
    with the cluster
 
 ## State Management
