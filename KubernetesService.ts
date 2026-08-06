@@ -84,23 +84,23 @@ export default class KubernetesService implements TokenRingService {
     }
 
     // Prepare user configuration
-    const userConfig: UserConfig = { name: "service-user" };
+    const globalConfig: UserConfig = { name: "service-user" };
     if (options.token) {
-      userConfig.token = options.token;
+      globalConfig.token = options.token;
     } else if (options.clientCertificate && options.clientKey) {
-      userConfig.clientCertificateData = options.clientCertificate;
-      userConfig.clientKeyData = options.clientKey;
+      globalConfig.clientCertificateData = options.clientCertificate;
+      globalConfig.clientKeyData = options.clientKey;
     }
 
     // Load KubeConfig from options
     kc.loadFromOptions({
       clusters: [clusterConfig],
-      users: [userConfig],
+      users: [globalConfig],
       contexts: [
         {
           name: `${options.clusterName}-context`,
           cluster: options.clusterName,
-          user: userConfig.name,
+          user: globalConfig.name,
           namespace: options.namespace || "default",
         },
       ],
