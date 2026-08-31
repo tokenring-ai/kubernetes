@@ -49,6 +49,28 @@ interface K8sResourceListResult {
   items?: K8sResourceListItem[] | undefined;
 }
 
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function isAborted(signal: AbortSignal): boolean {
+  return signal.aborted;
+}
+
+function unwrapResourceList(result: unknown): K8sResourceListResult {
+  if (!result || typeof result !== "object") {
+    return {};
+  }
+  const record = result as { items?: K8sResourceListItem[]; body?: K8sResourceListResult };
+  if (Array.isArray(record.items)) {
+    return record;
+  }
+  if (record.body && typeof record.body === "object") {
+    return record.body;
+  }
+  return {};
+}
+
 export default class KubernetesService implements TokenRingService {
   readonly name = "KubernetesService";
   description = "Provides Kubernetes functionality";
@@ -111,6 +133,7 @@ export default class KubernetesService implements TokenRingService {
     const coreV1Api = kc.makeApiClient(CoreV1Api);
     const customObjectsApi = kc.makeApiClient(CustomObjectsApi);
     const allResources: K8sResourceInfo[] = [];
+    const signal = agent.getAbortSignal();
 
     // Determine which namespaces to scan
     let namespacesToScan: string[] = [];
@@ -133,32 +156,47 @@ export default class KubernetesService implements TokenRingService {
           agent.infoMessage("No namespaces found or items array is empty, falling back to 'default'");
           namespacesToScan = ["default"];
         }
-      } catch (nsError: any) {
-        agent.infoMessage(`Could not list all namespaces: ${nsError.message}. Falling back to 'default' namespace.`);
+      } catch (nsError: unknown) {
+        const message = errorMessage(nsError);
+        agent.infoMessage(`Could not list all namespaces: ${message}. Falling back to 'default' namespace.`);
         allResources.push({
-          error: `Namespace discovery failed (fallback to 'default'): ${nsError.message}`,
+          error: `Namespace discovery failed (fallback to 'default'): ${message}`,
         });
         namespacesToScan = ["default"];
       }
     }
-    if (namespacesToScan.length === 0) {
-      agent.infoMessage("No namespaces specified or discovered, defaulting to 'default'");
-      namespacesToScan = ["default"];
-    }
 
     const processApiGroupVersion = async (groupVersion: string, _groupNameForLog?: string) => {
       try {
+        if (isAborted(signal)) {
+          agent.infoMessage("Resource discovery was aborted.");
+          return;
+        }
+
         agent.infoMessage(`Discovering resources for API group version: ${groupVersion}`);
-        const apiResourceList = await coreV1Api.getAPIResources();
+
+        const parts = groupVersion.split("/");
+        const fallbackGroup = parts.length > 1 ? (parts[0] ?? "") : "";
+        const fallbackVersion = (parts.length > 1 ? parts[1] : parts[0]) ?? "";
+
+        if (!fallbackVersion) {
+          agent.infoMessage(`Skipping API group version ${groupVersion} due to missing version`);
+          return;
+        }
+
+        // Core v1 lives at /api/v1; all other groups use /apis/{group}/{version}
+        const apiResourceList = fallbackGroup
+          ? await customObjectsApi.getAPIResources({ group: fallbackGroup, version: fallbackVersion })
+          : await coreV1Api.getAPIResources();
 
         for (const resource of apiResourceList.resources) {
+          if (isAborted(signal)) {
+            agent.infoMessage("Resource discovery was aborted.");
+            return;
+          }
           if (!resource.verbs.includes("list")) {
             continue;
           }
-
-          const parts = groupVersion.split("/");
-          const fallbackGroup = parts.length > 1 ? parts[0] : "";
-          const fallbackVersion = parts.length > 1 ? parts[1] : parts[0];
 
           const group = resource.group || fallbackGroup;
           const version = resource.version || fallbackVersion;
@@ -176,30 +214,33 @@ export default class KubernetesService implements TokenRingService {
             // Core resources like pods, services, configmaps, etc.
             // Note: These are listed via CoreV1Api methods
             for (const ns of namespacesToScan) {
+              if (isAborted(signal)) {
+                agent.infoMessage("Resource discovery was aborted.");
+                return;
+              }
               try {
-                let result: K8sResourceListResult;
+                let listed: unknown;
                 if (resource.namespaced) {
                   // For namespaced core resources, use listNamespacedCustomObject with core group
-                  const { body: coreResult } = (await customObjectsApi.listNamespacedCustomObject({
+                  listed = await customObjectsApi.listNamespacedCustomObject({
                     group: "",
                     version,
                     namespace: ns,
                     plural: pluralName,
-                  })) as { body: K8sResourceListResult };
-                  result = coreResult;
+                  });
                 } else {
                   // For cluster-scoped core resources
-                  const { body: coreResult } = (await customObjectsApi.listClusterCustomObject({
+                  listed = await customObjectsApi.listClusterCustomObject({
                     group: "",
                     version,
                     plural: pluralName,
-                  })) as { body: K8sResourceListResult };
-                  result = coreResult;
+                  });
                 }
+                const result = unwrapResourceList(listed);
                 if (result.items) {
                   result.items.forEach(item => {
                     allResources.push({
-                      group: "v1",
+                      group: "",
                       version,
                       kind,
                       namespace: item.metadata?.namespace,
@@ -209,7 +250,7 @@ export default class KubernetesService implements TokenRingService {
                 }
               } catch (err) {
                 allResources.push({
-                  group: "v1",
+                  group: "",
                   version,
                   kind,
                   namespace: resource.namespaced ? namespacesToScan[0] : undefined,
@@ -220,24 +261,27 @@ export default class KubernetesService implements TokenRingService {
           } else {
             // Custom resources - use CustomObjectsApi with the actual group
             for (const ns of namespacesToScan) {
+              if (isAborted(signal)) {
+                agent.infoMessage("Resource discovery was aborted.");
+                return;
+              }
               try {
-                let result: K8sResourceListResult;
+                let listed: unknown;
                 if (resource.namespaced) {
-                  const { body: customResult } = (await customObjectsApi.listNamespacedCustomObject({
+                  listed = await customObjectsApi.listNamespacedCustomObject({
                     group,
                     version,
                     namespace: ns,
                     plural: pluralName,
-                  })) as { body: K8sResourceListResult };
-                  result = customResult;
+                  });
                 } else {
-                  const { body: customResult } = (await customObjectsApi.listClusterCustomObject({
+                  listed = await customObjectsApi.listClusterCustomObject({
                     group,
                     version,
                     plural: pluralName,
-                  })) as { body: K8sResourceListResult };
-                  result = customResult;
+                  });
                 }
+                const result = unwrapResourceList(listed);
                 if (result.items) {
                   result.items.forEach(item => {
                     allResources.push({
@@ -261,10 +305,11 @@ export default class KubernetesService implements TokenRingService {
             }
           }
         }
-      } catch (groupError: any) {
-        agent.infoMessage(`Failed to discover or process resources for API group version ${groupVersion}: ${groupError.message}`);
+      } catch (groupError: unknown) {
+        const message = errorMessage(groupError);
+        agent.infoMessage(`Failed to discover or process resources for API group version ${groupVersion}: ${message}`);
         allResources.push({
-          error: `Resource discovery failed for groupVersion ${groupVersion}: ${groupError.message}`,
+          error: `Resource discovery failed for groupVersion ${groupVersion}: ${message}`,
         });
       }
     };
@@ -278,6 +323,10 @@ export default class KubernetesService implements TokenRingService {
     try {
       const apiGroups = await apisApi.getAPIVersions();
       for (const group of apiGroups.groups) {
+        if (isAborted(signal)) {
+          agent.infoMessage("Resource discovery was aborted.");
+          break;
+        }
         if (group.preferredVersion?.groupVersion) {
           agent.infoMessage(`Processing preferred version ${group.preferredVersion.groupVersion} for group ${group.name}`);
           await processApiGroupVersion(group.preferredVersion.groupVersion, group.name);
@@ -285,10 +334,11 @@ export default class KubernetesService implements TokenRingService {
           agent.infoMessage(`Skipping API group ${group.name} as it has no preferred version listed.`);
         }
       }
-    } catch (apiGroupsError: any) {
-      agent.errorMessage(`Failed to get API group list: ${apiGroupsError.message}`);
+    } catch (apiGroupsError: unknown) {
+      const message = errorMessage(apiGroupsError);
+      agent.errorMessage(`Failed to get API group list: ${message}`);
       allResources.push({
-        error: `Failed to get API group list: ${apiGroupsError.message}`,
+        error: `Failed to get API group list: ${message}`,
       });
     }
 

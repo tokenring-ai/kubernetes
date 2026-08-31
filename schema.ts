@@ -7,8 +7,8 @@ export const KubernetesServiceConfigSchema = z
     apiServerUrl: z.string().meta({ restartRequired: true, description: "Kubernetes API server URL" } satisfies ConfigFieldMeta),
     namespace: z
       .string()
-      .default("default")
-      .meta({ description: "Default namespace for cluster operations" } satisfies ConfigFieldMeta),
+      .exactOptional()
+      .meta({ description: "Namespace to scan. Omit to discover and scan all namespaces." } satisfies ConfigFieldMeta),
     token: z
       .string()
       .exactOptional()
