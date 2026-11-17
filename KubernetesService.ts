@@ -1,4 +1,4 @@
-import { ApisApi, CoreV1Api, CustomObjectsApi, KubeConfig } from "@kubernetes/client-node";
+import { ApisApi, CoreV1Api, CustomObjectsApi, KubeConfig, KubernetesObjectApi } from "@kubernetes/client-node";
 import type { Agent } from "@tokenring-ai/agent";
 
 import type { TokenRingService } from "@tokenring-ai/app/types";
@@ -38,15 +38,12 @@ interface UserConfig {
   clientKeyData?: string | undefined;
 }
 
-interface K8sResourceListItem {
-  metadata?: {
-    namespace?: string | undefined;
-    name?: string | undefined;
-  };
-}
-
-interface K8sResourceListResult {
-  items?: K8sResourceListItem[] | undefined;
+/**
+ * Kubeconfig `*Data` fields hold base64-encoded PEM. The settings ask for PEM, so PEM text is
+ * encoded here; a value that is already base64 (copied from a kubeconfig) is passed through.
+ */
+function toKubeConfigData(value: string): string {
+  return value.trimStart().startsWith("-----BEGIN") ? Buffer.from(value, "utf8").toString("base64") : value;
 }
 
 function errorMessage(error: unknown): string {
@@ -55,20 +52,6 @@ function errorMessage(error: unknown): string {
 
 function isAborted(signal: AbortSignal): boolean {
   return signal.aborted;
-}
-
-function unwrapResourceList(result: unknown): K8sResourceListResult {
-  if (!result || typeof result !== "object") {
-    return {};
-  }
-  const record = result as { items?: K8sResourceListItem[]; body?: K8sResourceListResult };
-  if (Array.isArray(record.items)) {
-    return record;
-  }
-  if (record.body && typeof record.body === "object") {
-    return record.body;
-  }
-  return {};
 }
 
 export default class KubernetesService implements TokenRingService {
@@ -102,7 +85,7 @@ export default class KubernetesService implements TokenRingService {
       server: options.apiServerUrl,
     };
     if (options.caCertificate) {
-      clusterConfig.caData = options.caCertificate;
+      clusterConfig.caData = toKubeConfigData(options.caCertificate);
     }
 
     // Prepare user configuration
@@ -110,8 +93,8 @@ export default class KubernetesService implements TokenRingService {
     if (options.token) {
       globalConfig.token = options.token;
     } else if (options.clientCertificate && options.clientKey) {
-      globalConfig.clientCertificateData = options.clientCertificate;
-      globalConfig.clientKeyData = options.clientKey;
+      globalConfig.clientCertificateData = toKubeConfigData(options.clientCertificate);
+      globalConfig.clientKeyData = toKubeConfigData(options.clientKey);
     }
 
     // Load KubeConfig from options
@@ -132,6 +115,7 @@ export default class KubernetesService implements TokenRingService {
     const apisApi = kc.makeApiClient(ApisApi);
     const coreV1Api = kc.makeApiClient(CoreV1Api);
     const customObjectsApi = kc.makeApiClient(CustomObjectsApi);
+    const objectApi = KubernetesObjectApi.makeApiClient(kc);
     const allResources: K8sResourceInfo[] = [];
     const signal = agent.getAbortSignal();
 
@@ -208,100 +192,25 @@ export default class KubernetesService implements TokenRingService {
             continue;
           }
 
-          // For core v1 resources (group is empty), use CoreV1Api
-          // For custom resources (non-empty group), use CustomObjectsApi
-          if (!group) {
-            // Core resources like pods, services, configmaps, etc.
-            // Note: These are listed via CoreV1Api methods
-            for (const ns of namespacesToScan) {
-              if (isAborted(signal)) {
-                agent.infoMessage("Resource discovery was aborted.");
-                return;
-              }
-              try {
-                let listed: unknown;
-                if (resource.namespaced) {
-                  // For namespaced core resources, use listNamespacedCustomObject with core group
-                  listed = await customObjectsApi.listNamespacedCustomObject({
-                    group: "",
-                    version,
-                    namespace: ns,
-                    plural: pluralName,
-                  });
-                } else {
-                  // For cluster-scoped core resources
-                  listed = await customObjectsApi.listClusterCustomObject({
-                    group: "",
-                    version,
-                    plural: pluralName,
-                  });
-                }
-                const result = unwrapResourceList(listed);
-                if (result.items) {
-                  result.items.forEach(item => {
-                    allResources.push({
-                      group: "",
-                      version,
-                      kind,
-                      namespace: item.metadata?.namespace,
-                      name: item.metadata?.name,
-                    });
-                  });
-                }
-              } catch (err) {
-                allResources.push({
-                  group: "",
-                  version,
-                  kind,
-                  namespace: resource.namespaced ? namespacesToScan[0] : undefined,
-                  error: `Failed to list ${kind} instances: ${formatError(err)}`,
-                });
-              }
+          // Subresources (pods/log, deployments/scale) are not listed on their own.
+          if (pluralName.includes("/")) continue;
+
+          // KubernetesObjectApi builds the right path for both core resources (/api/v1/...) and
+          // grouped ones (/apis/{group}/{version}/...). Cluster-scoped resources are listed once,
+          // not once per namespace.
+          const apiVersion = group ? `${group}/${version}` : version;
+          for (const ns of resource.namespaced ? namespacesToScan : [undefined]) {
+            if (isAborted(signal)) {
+              agent.infoMessage("Resource discovery was aborted.");
+              return;
             }
-          } else {
-            // Custom resources - use CustomObjectsApi with the actual group
-            for (const ns of namespacesToScan) {
-              if (isAborted(signal)) {
-                agent.infoMessage("Resource discovery was aborted.");
-                return;
+            try {
+              const listed = await objectApi.list(apiVersion, kind, ns);
+              for (const item of listed.items) {
+                allResources.push({ group, version, kind, namespace: item.metadata?.namespace, name: item.metadata?.name });
               }
-              try {
-                let listed: unknown;
-                if (resource.namespaced) {
-                  listed = await customObjectsApi.listNamespacedCustomObject({
-                    group,
-                    version,
-                    namespace: ns,
-                    plural: pluralName,
-                  });
-                } else {
-                  listed = await customObjectsApi.listClusterCustomObject({
-                    group,
-                    version,
-                    plural: pluralName,
-                  });
-                }
-                const result = unwrapResourceList(listed);
-                if (result.items) {
-                  result.items.forEach(item => {
-                    allResources.push({
-                      group,
-                      version,
-                      kind,
-                      namespace: item.metadata?.namespace,
-                      name: item.metadata?.name,
-                    });
-                  });
-                }
-              } catch (err) {
-                allResources.push({
-                  group,
-                  version,
-                  kind,
-                  namespace: resource.namespaced ? ns : undefined,
-                  error: `Failed to list ${kind} instances: ${formatError(err)}`,
-                });
-              }
+            } catch (err) {
+              allResources.push({ group, version, kind, namespace: ns, error: `Failed to list ${kind} instances: ${formatError(err)}` });
             }
           }
         }

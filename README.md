@@ -130,8 +130,8 @@ Discovers and lists all API resources in the cluster.
 2. Determines which namespaces to scan (all namespaces or specified namespace)
 3. Discovers all API groups and their preferred versions
 4. For each API group version, retrieves available resources
-5. Filters resources that support the `list` verb
-6. Lists all instances of each resource across the configured namespaces
+5. Filters resources that support the `list` verb; subresources (such as `pods/log`) are skipped
+6. Lists all instances of each namespaced resource across the configured namespaces, and each cluster-scoped resource once
 7. Returns an array of `K8sResourceInfo` objects
 
 **Response Format:**
@@ -305,9 +305,9 @@ export type ParsedKubernetesServiceConfig = z.output<typeof KubernetesServiceCon
 | `apiServerUrl`      | `string` | Yes      | -           | Full URL to the Kubernetes API server             |
 | `namespace`         | `string` | No       | `"default"` | Target namespace (discovers all if not specified) |
 | `token`             | `string` | No       | -           | Bearer token for authentication                   |
-| `clientCertificate` | `string` | No       | -           | Client certificate in PEM format                  |
-| `clientKey`         | `string` | No       | -           | Client private key in PEM format                  |
-| `caCertificate`     | `string` | No       | -           | CA certificate for server verification            |
+| `clientCertificate` | `string` | No       | -           | Client certificate: PEM text or base64 (as in a kubeconfig) |
+| `clientKey`         | `string` | No       | -           | Client private key: PEM text or base64 (as in a kubeconfig) |
+| `caCertificate`     | `string` | No       | -           | CA certificate for server verification: PEM text or base64 |
 
 ### Authentication Methods
 
@@ -685,7 +685,6 @@ export default defineConfig({
 - **No Pagination**: Large clusters may produce verbose results without pagination features
 - **Authentication**: Only token and client certificate authentication supported
 - **KubeConfig Support**: No Kubernetes config file load support (uses constructor parameters only)
-- **Core Resource Listing**: Currently uses `CustomObjectsApi` for all resource listing, including core resources
 
 ## Integration with TokenRing
 
